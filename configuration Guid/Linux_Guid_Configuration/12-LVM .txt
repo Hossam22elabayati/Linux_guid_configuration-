@@ -1,0 +1,209 @@
+LVM (Logical volume manager ) :
+-> can do in disk or partition , change type to LVM 
+
+convert first to physcial volume ? 
+	- take a hard disk and divide to equally spaces  ( physical extents ) and collect  it inside a volume group 
+-> take a physcial Volumes -> to -> Volume group 
+
+1 T -> 1000 extents 
+
+-> create a logical volumes 
+
+work : 
+-> map 1 physical extent with 1 logical extent
+
+after do a logical volume wor normally : 
+$ mkfs -t xfs 
+$ mount 
+// want as a  persistent -> put on a /etc/fstab 
+
+note :
+extent is the smallest unit of storage that LVM manages. It represents a block of 
+contiguous space that is allocated within a Volume Group (VG)
+
+Logical Volume (LV) is a collection of extents that are allocated from the VG.
+#######################################
+1- PV( convert to physcial volume ) 
+2- VG (volume group )
+3- LV (logical volume )
+4- File system 
+5- mount my logical volume 
+##########################################
+commands :  
+// create to physical volume :
+$ pvcreate /dev/sdb1(partition) or /dev/sdc (hard disk)
+// list a physical Volume , more info  
+ $pvdisplay
+
+//scan or show physical volumes 
+$ pvs -> physical volume show 
+
+PE -> physica extent 4.00MIB
+
+divide a physical Volumes <-> to PE (physical extent ) by default is 4MIB and collect space 
+the smallest unit ممكن نشبها بالسيكتور  -> is a 4MIB 
+
+---------------------------------------------------
+default to LVM -> start with the first hard disk ( take a space then take the next and the next ) -> linear work 
+can change write in the three disks 
+----------------------------------------------------
+// create a volume group 
+$ vgcreate [name] devices [physical volumes]
+$ vgcreate testvg /dev/sdb1 /dev/sdc
+
+// display Volume group  , all volume groups 
+$ vgdisplay 
+$ vgdisplay testvg 
+
+// toremove 
+$ vgremove testg 
+
+// scenario in exam to know , want to determine a size of extent assign to logical volume   , by default 4mib , need to size to extent chnage it 
+$ vgcreate testg -s 16M /dev/sdb1 /dev/sdc
+vgcreate  testgr -s 200M /dev/sdc /dev/sdd
+// 200 mib per one extent 
+
+
+
+// create a logical volume  ,
+$ lvcreate --size 1G --name lv1 testgr 
+$ lvcreate -n [name] lv1 -L [size] 20G  [name of volume group ] testgr
+
+// show 
+$ lvs -> logical volume scan 
+$lvdisplay 
+
+/ to show a vg with a logical and physical volumes 
+$ vgdisplay -v testgr 
+
+// make a file system  
+$ mkfs -t ext4 /dev/testgr/LV1 or another same path [/dev/mapper/testgr-LV1]
+
+what is the mapper :? 
+	- device mapper : kernel to [read] a converted device from physical volume to logical volume 
+بيخلي الفيزيكال فوليوم عندي الكيرنل تعرف تقراها عن طريق لوجيكل 
+map LV1 [virtual ] ======> بتشاور  on physical volume الفلاني 
+// check : 
+# ls -l /dev/mapper/testgr-LV1
+
+$ mkdir /mnt/lv1-data
+
+$ mount /dev/testvg/lv1  /mnt/lv1-data 
+
+$ df -h 
+
+// add another logical volumes 
+// want as a persistent mount add under /etc/fstab 
+##############################################################
+// to remove lv 
+// remove from fstab 
+//and  umount 
+$ lvremove /dev/testgr/lv_hossam1
+
+// remove a volume group 
+$ vgremove testgr 
+
+// physical Volumes 
+$pvs 
+// to remove 
+$pvremove sd[a-c]
+
+##################################################################
+// can create a logical volume give a number of extents or precentage : by option -l  مهم 
+extent -l : 
+// take 50% from free space 
+$ lvcreate -n lv5 -l 50%FREE testgr
+
+// take all 100%FREE 
+
+10%vg -> 10% from a volume group 
+Or 
+-l 1000 number 
+Or 
+-L +10G
+#################################################################
+# facllocate a logical volume and then do a extended 
+to extened : 
+lvextened or lvresize 
++  to increate 
+- to decrease 
+without any of + , - : exact match 
+
+$ lvextened -l +1G /dev/testgr/lv3-hossam 
+// increase a size of logical volume , but not tell a file system the space is changed 
+$ lvs 
+$ df -TH -> لسا محسش بيها 
+
+// to do effect with ext2,3,4 only , xfs another command $xfs_growfs to resize file system xfs   
+$ resize2fs /dev/testgr/LV1 
+$ df -h 
+
+or relief and give : -r to effect in one command 
+
+# extended with extent have avaialble 
+#################################################################
+// to extend  
+etxend and resize in one step (lvextend   -r   -L +10G /dev/testvg/lv1 ) -> can do in one step this without next septs 
+-l (small) -> number of extents , give a percentage  or number 10% from VG or 30% or 100% from VG
+Can give and replace -L with بدال  size 
+
+-L (capital ) = +10G , increase 10G  -> $ lsextend -L +10 /dev/testgr/LV1
+After extend mount point not 
+
+// to do effect with ext2,3,4 only , xfs another command $xfs_growfs to resize file system xfs   
+$ resize2fs /dev/testgr/LV1 then 
+$ df -h 
+
+Note : 
+$ lvextend -L 20G /dev/testgr/LV1 
+// assign to it space 20 not add  
+
+// if give a space in exten
+lvextend -L 5G /dev/testgr/LV1
+
+-r -> work with any file system ريح دماغك 
+
+
+ to reduce :  don’t forget -r 
+lvReduce->  $lvreduce    -r   -L -20G     /dev/testvg/lv1
+or 
+$ lvresize -L  -r -5G /dev/testgr/lv1 -> resize is can use in increase / decrease ||  extended in extended only , reduce -> reduce only
+
+	Give you advice when reduce space reduce -> steps: unmount, fsck, resize2fs
+
+################################################################
+Extend Volume group
+
+1- create physical volume on new hd      $ pvcreate /dev/sde
+
+2- extend volume group                   $ vgextend   testvg     /dev/sde
+
+################################################################
+ Reduce Voulme Group
+ you want to remove    sdc1
+ 
+// لو غاشمت و عملتها علطول تمسحه مش هيرضي 
+// move a size of a hard disk want to out from my volume group, transfer , move a ny data in this hard disk  
+$ pvs 
+$ pvmove /dev/sdc1
+
+
+$ vgreduce testvg /dev/sdc1 
+This command removes a specific physical volume (/dev/sdc1) from the volume group (testvg).
+
+// remove a volume group
+$ vgremove testvg  
+.
+
+
+// to show 
+$ vgdisplay 
+$vgs 
+
+Or 
+$ pvdisplay 
+$ pvs 
+###############################################################
+################################################################
+Advanced LVM , RAID with LVM : 
+

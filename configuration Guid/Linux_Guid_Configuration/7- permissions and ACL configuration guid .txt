@@ -1,0 +1,143 @@
+Access control list : 
+
+linux file /directory permissions : 
+	- Basic permission => r 4 , w 2 , x 1
+	- special permission => u+s 4 , g+s 2 , o+t 1
+	and use this permisson (user (owner) , group(owner) , other)
+	> change it chmod ( symoblic , octal )
+
+Acl :  (more control / shared to file or directory)
+can grant or revoke  access to multiple users or multiple groups 
+
+Note: it is recommended that we make changes on basic permissions than make ACL.
+
+commands :
+$ setfacl [file]
+$ getfacl [file]
+
+AcL have an entires :
+    entires 		change perm
+-> user owner  	u::rw-
+-> group owner 	g::r--
+-> user named 	u:ali:rw-
+-> group named 	g:sales:r--
+-> mask 		m::rw-
+-> default  (نسيبها للاخر هنعرفها)	d or -d  -> inside it entiries 
+
+examples : 
+$ setfacl [option] [file]
+-m : modify 
+$ setfacl -m u:kahled:r myfile
+
+-R : recursively use with directories 
+$ setfacl -R  -m u:kahled:r mydir/ 
+
+$ getfacl myfile 
+
+// to know this file have access list or not 
+$ls -l 
+-rwxrwxrwx+ -> with access control list 
+-rwxrwxrwx. -> without access control list
+
+-> xfs , ext4 (support it by default )
+# if a file system don’t support Acl , you can use this command : ex ext3 
+$ mount -t ext3 -o remount ,acl  /home
+
+then add mount point in fstab 
+
+
+
+#======================================
+mask : 
+- if not set a mask :
+	- mask is inherit by default permission from user_named or group_named or other 
+	- or default expility in directory added a default mask or if not added , added a default user_named or group_named 
+	- it takes a highest permission from them 
+
+- mask : is do a limitations to permissions
+- mask effectivie on :  in all expected a owner 
+	- usernamed , groupnamed , group owner , other  
+	- any of them , if take a permission highest of a mask , 
+	mask is force a your permission to take a mask permission 
+
+$ setfacl -m mask::r file1
+
+// can do a rollback and delete -> option -x  , and do a specific remove to user named or group named 
+$ setfacl -x g:staff file3
+
+// remove all access control list to file with bulk 
+$ setfacl -b file3
+
+
+// copy the access control list of one file to another 
+$ getfacl file1 | setfacl --set-file=- file2
+
+// copy the access ACL into the defaul ACL 
+$ getfacl --access dir1 | setfacl -s -M- dir2
+
+#=========================================
+
+•  Root User:
+•	Can set, modify, or remove ACLs on any file or directory in the system.
+•	Can manage ACLs for any user or group.
+  
+Regular User:
+•	Can manage ACLs only on files or directories they own.
+
+
+The last entry default : under it another entries 
+ACL Default :
+-	Default user owner -> default:user(owner)::rw- -> d:u::rw-
+-	Default group owner ->d:g::----
+-	Default User named -> d:u:ali:rw-
+-	Default group named -> d:g:sales:r--
+-	Default mask -> d:m::r--
+
+g+s on directory any files or directories inherit group owner 
+
+
+$ setfacl -m d:u::rw dir1
+
+:: -> mean owner not write a name and with group owner the same 
+
+if apply thing in file any special permission :
+Option flags show In apply any thing in special permission 
+
+// to remove bulk all acl defaul on directory : 
+-k 
+$ setfacl -k dir1
+
+Options :
+-R -> recursive apply 
+-x -> work with specific entry 
+-b -> work bluk 
+-k -> remove a default entry (ACL all of it ) , bulk
+-d -> default or use -> d:
+
+
+Note (imp) -> The umask has no effect if a default ACL exists
+
+-M option usages : 
+Option : -M -> allows you to modify ACLs of a file or directory by reading Access Control List (ACL) entries from a file containing ACL rules
+
+$ setfacl -M <rules-file> <target-file>
+$ getfacl file1 >> take_acl 
+$ setfacl -M take_acl file2
+
+
+#==================================
+in defined : 
+write a mask or m 
+write a default or d or -d 
+write a user or u 
+etc 
+
+in perm assign -> r or r--
+#============================
+important notes :
+mask recalculating permission and force 
+
+-> The -n option tells setfacl to prevent automatic mask recalculation. , 
+-n : to preserve the existing mask during modifications. 
+preserve because any modification in a ownernamed or groupnamed change a mask 
+$ setfacl -n -m u:john:rw file1

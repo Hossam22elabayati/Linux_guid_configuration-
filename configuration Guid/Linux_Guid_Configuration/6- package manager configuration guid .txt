@@ -1,0 +1,338 @@
+package manager : redhat 
+package mng install :
+GUI : 
+	- software center 
+	- browser 
+cli : 
+	- rpm 
+	- yum (front end to rpm)
+	- dnf (updated version of yum )
+
+
+=======================================
+- developers write a code -> do to a src code compile and build deliver an executable file 
+(.msi , .exe ,.rpm,.deb 
+
+- pkg.rpm : to install need some dpendencies to a pacakge 
+- pkg1 , pkg2 , pkg3 مين قال انوا دول الديبيندس للباكدج  a inside a metadat information (dependencies list )
+
+
+#==========================================
+package content : 
+-> every rpm package  is an special archive , made up of three 
+components : 
+
+1- information about the package (meta data )
+- contian information about package (name , version , arch , release 
+checksum  , dependencies list)
+
+2- files when install or files installing by the package (extract it ) and put under /etc or /usr/share/docs 
+or manual pages 
+(contian a configuration files and manual pages )
+
+3- script run when (install , update , remove ) , for 
+ex : script run to create service user apache or a triggered when
+other pacakges are installed , update or removed 
+
+
+#check a package is reliable or not from a : 
+signature to a provider : GPG keys
+# is a ختم  from provider of pacakge to package , to sure reliabilty to package 
+
+in the repo file config to pacakge : 
+Gpg check =1 -> enable check 
+Gpg key = url -> to check a 
+Gpg key : is do sign to package is out form google or redhat 
+to deny any reverse engineering 
+
+pacakge content : 
+pack-name - [version] - [release]-[arc].rpm
+
+version :version of hardware package
+Release : bug and solve it and release 
+arch 
+
+Dependencies are software packages, libraries, or components that a program or package
+requires in order to run or function properly. In other words, they are the "building blocks" or
+"prerequisites" needed by a software to execute its tasks
+
+
+#===============================
+
+$ rpm -i [full path]
+// faield dependencies , should get a dependencies manual 
+ 
+# rpm check in local database in a lib files 
+rpm first checks the system's 
+local database of installed packages 
+to see if the dependencies are already fulfilled. 
+This database is located in /var/lib/rpm/
+
+# and not use to install not effectivie loop of dependencies get it to install 
+
+#=======================================
+# rpm command use it in another cases not install 
+$ rpm [option]... [full path]
+-p : package 
+
+$ rpm -i /run/media/hamin/CentOS-Stream-9-BaseOS-x86_64/AppStream/Packages/zziplib-utils-0.13.71-10.el9.x86_64.rpm
+failed dependecies  
+
+// list all installed pacakges 
+$ rpm -qa 
+
+$ rpm -qa | grep nfs 
+
+check pacakge installed or not 
+$ rpm -q nfs-utils 
+
+// get details information about package 
+$ rpm -qi nfs-utils-2.5.4-29.el9.x86_64
+
+// list a file installed by the package 
+$ rpm -ql nfs-utils-2.5.4-29.el9.x86_64
+
+// list a configuration files to a package 
+$ rpm -qc nfs-utils-2.5.4-29.el9.x86_64
+
+// list a documnetation files installed by the package 
+$ rpm -qd nfs-utils-2.5.4-29.el9.x86_64
+
+// list a shell scripts that run before or after the package is installed or remove 
+$ rpm -q --scripts nfs-utils-2.5.4-29.el9.x86_64
+-> pre install script run before package install run script ,
+-> post install linux run after install
+
+
+// list change information for  a package if edit in a package 
+$ rpm -q --changelog nfs-utils-2.5.4-29.el9.x86_64
+
+ 
+// to remove 
+$ rpm -e vsftpd
+
+// -v verbos
+$ rpm -iv vsftpd
+
+// -h hashed , more detials
+$ rpm -ivh vsftpd
+
+// to update
+$ rpm -F vsftpd
+
+// -U if found update it , not found install it
+$ rpm -U vsftpd
+
+// to know changed packages any one edit In signature (check in hash ) signature files :
+/etc/pki/rpm-gpg/
+
+// inside it keys of packages
+$ rpm -K vsftpd
+$ ls http* --> httpd (apache package)
+$ rpm -ivh httpd-s
+
+run/media/hamin/Cento-----/
+--> found App stream (packages) and base os (kenrel)
+/AppStream --> inside it repo data and meta data
+---> repo data : repos contian (packages)
+---> meta data : for every packages and repos and how reach this pakcage in any repo
+
+
+#===================================================
+Yum : 
+Yum : is a frontend to rpm 
+dnf : the updated version of yum 
+
+yum client -> yum command 
+yum server (repositries )
+
+confguration files of yum :
+config file -> /etc/yum-repo.d/
+$ ls *.repo
+// to add a repo , can add under a this directory in file .repo and add content or repo 
+
+/etc/yum.conf (control a behaviour of yum )
+
+
+# note : yum uses rpm in backen to perform operation like installing , Querying and removing packages 
+
+$ yum install [exact_name to a pacakge] 
+
+// show an enabled repos 
+$ yum repolist 
+
+// show all repos enabled or not 
+$ yum repolist --all 
+
+
+// to clean a meta data 
+$ yum clean metadat 
+
+
+// update all system , all packages
+$ yum update
+$ apt update -> this update the index
+
+// update a specific package 
+$ yum update bzip2.x86_64 
+// search to update in meta data and get it 
+
+
+$ yum search "nfs" ,  is faster because it limits the search scope., search for [  package name ]
+# get a exactmatch or description contian this 
+
+search all :
+searches for the specified <keyword> in the entire metadata of the packages. This includes:
+Package name
+Summary
+Description
+Maintainer information
+
+ 
+// return more resultes than , yum search , s slower but provides more comprehensive results
+$yum search all "webserver"
+
+// install a package direct without interactive 
+$ yum install -y firefox 
+
+// remove a package 
+$ yum -y  remove firefox 
+
+// list all installed and avalaible packages in repo not installed 
+$ yum list 
+
+// list an installed
+$ yum list installed | less
+
+$ yum list openssh-server
+say installed and avaliable
+ 
+
+// more details about packages , information about package
+# yum info firefox
+
+// clear cache or flush , if yum is مهنج , all clean
+# yum clean all
+# yum clean packages or other
+
+-> yum provides function : which package include this config file 
+$ yum provides etc/httpd/conf/httpd.conf
+or 
+$ yum whatprovides etc/httpd/conf/httpd.conf
+
+
+yum Group : 
+$ yum group list
+$ yum group install "virtualization host "
+$ yum group remove
+$ yum group update
+$ yum group info
+
+// install package from specific repo have it سواء enabled or disabled
+$ yum –enablerepo=epel install phpMyAdmin
+
+// history to my work with yum installed or other
+$ yum history 
+$ yum history undo 9
+
+// config manager
+$ dnf config-manager
+// disable all repos 
+$ dnf config-manager --disable "*"
+$ dnf config-manager --enable appstream
+--enable [id-of package] 
+
+
+#======================
+Metadata (can control it) : 
+ in file /etc/yum.conf -> behavior 
+# this line , #  when remove a package is remove it and unused dependencies 
+clean_requirements_on_remove=True
+$ man -s5 yum.conf 
+keep_cache=true 
+
+cache under : /var/cache/dnf/
+app stream -> xml files , look in it  -> repo data , packages مش هتلاقي جواها حاجه ممكن تلاقي لو قولتلوا سيب السورس بتاع الباكدج الي نزلتها من الكونفج فايل 
+Base os : repo data , packages 
+
+$ yum clean metadata 
+
+#=======================================
+
+Base os : repositroty mainly concerns the os 
+app stream :repositry contains application modules and non-moduler Rpms 
+
+
+
+#========================================================
+add a repo from path of local cd :
+a cd : 
+/run/media/hamin/CentOS-Stream-9-BaseOS-x86_64
+under it two Appstream , base os take two 
+
+how a repo write ? 
+[id]
+name=
+baseurl=
+gpgkey= refer to gpg url 
+gpgcheck=1
+repo_gpgcheck=1
+metadata_expire=6h 
+enabled=1 
+1 [enable] , 0 [disable]
+
+#==================
+1- mount mycd -> /mnt/myrepos
+$ mount /dev/sr0 /mnt/repo-local 
+2- create a myrepos.repo  , write in it the folloeing
+[local-appstream]
+name=mylocal_appstream
+baseurl=file:///mnt/repo-local/AppStream
+enabled=1
+
+[local-baseos]
+name=mylocal_baseos
+baseurl=file:///mnt/repo-local/BaseOS
+enabled=1
+
+3-
+ $ dnf config-manager --enable local-appstream
+$ dnf config-manager --enable local-baseos
+
+$ yum repolist
+
+
+
+
+
+#========================
+// verfiy a package 
+$ rpm -V openssh-server 
+#====================
+// if want to disable a repo :
+can enter to config file add enabled=0 or with a 
+config-manager 
+
+#=================================================
+
+// show a logs :
+$ tail -5 /var/log/dnf.rpm.log
+
+#=========================================
+yum == dnf but الي زياده  in dnf is a modules :
+// new in dnf 
+Manage Modules with DNF: to install a full module with a server/client   
+$ dnf module list
+
+$ dnf module list module-name
+
+$ dnf module install module-name 
+
+
+$ dnf module remove module-name 
+
+$ dnf module update module-name 
+
+$ dnf module info modoule-name 
+
+$ dnf module provides package

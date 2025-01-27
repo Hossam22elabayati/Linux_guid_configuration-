@@ -1,0 +1,286 @@
+
+Red Hat Enterprise Linux uses a standard 
+logging system that is based on the Syslog protocol
+
+System logging :  -> syslog protocol 
+	1- Direct write (apache)=> /var/log/httpd/access.log , error.log
+	2- throught systemctl (systemd journald)
+	3- rsyslog 
+
+-> systemd-journald : collect a logs from system kernel , standard output and error from daemons , Output from the early stages of the boot process
+
+systemlogs adn other (as a structured indexed journal ) 
+-> rsyslog read from structured index journal and write in files text 
+
+files for example :
+/var/log/secure : syslog messages related security and Authentication 
+/var/log/messages : most of syslog messages are logged here (
+exceptions , Authentication , mail process , sechduling jobs , dubggeing )
+ /var/maillog : syslog messages about the mail server 
+/var/log/cron : syslog messages about scheduling jobs 
+/var/log/boot.log : stores console messages about system startup 
+
+
+format of logs message :
+1- time stamp (to the log entry was recorded)
+2- the host from which the log message was sent 
+3- the program or process name and PID number that sent the log message 
+4- the actual message sent 
+
+#=============================================================
+- debian : store a systemd-journald & rsyslog under /var 
+- redhat : store a systemd-journald -> /run/log/journal => it it not parmenant acorss reboot 
+// to show a logs of a journal -> access with command $ journalctl 
+and store rsyslogs under /var/log -> is parmenant 
+
+#===========================================
+
+log is contian two: 
+facilitie.priority 
+
+Facilities types : 
+kernel , user , cron , mail , ftp , any damond who send logs 
+prirorities : 
+Emerge =0 : system not stabile => system is unusable 
+alert =1 => action must be taken immediatily 
+critical =2 => critical condition 
+error =3 => non critical condition , error condition 
+warning =4 => warning condition 
+notice =5 => normal but signaficant event 
+info =6  => information event
+debug =7 => debbuging level message 
+
+	
+*.inf 
+ftp.*
+*.* => Any facility with any priority 
+
+
+#========================================
+configuration file can customize logs in it : 
+/etc/rsyslog.conf 
+
+from local0 to local7 => Cutom local messages 
+
+# customize a new log file , write in this file 
+local2.err                                              /var/log/local2.err
+local3.*                                                /var/log/local3 
+$ systemctl restart rsyslog.service
+
+# files this can create manual under/var/log/
+# or send a message with logger will create Automatically 
+
+$ logger -p local3.err "Hello new users"
+$ tail -F /var/log/local3
+
+# done 
+
+# note if 
+send a message in local2.err & and have a local2.info will show a message of error 
+in it because a local2.info (6)> local2.err (3)  , will take a messages criticaility in it or smallest than number 
+
+
+
+show a logs of rsyslog : 
+under /var/log 
+$ tail -f 
+$ tail -F  
+
+-f : follow file if existes 
+-F : follow a file , if not existes follow it also 
+ 
+
+
+logger : send a message to system log 
+
+$ logger -p local2.err "hello every body "
+
+
+#=====================================================================
+=> send a messages to server log :
+
+server configuration : 
+
+# nano /etc/rsyslog.conf 
+
+// determine a a clients send tcp / udp module or both and uncomment it 
+
+# systemctl restart rsyslog.service 
+$ sudo firewall-cmd --add-service=syslog --permanent 
+$ sudo firewall-cmd --add-service=syslog 
+
+#-----------------------
+
+client configuration: 
+
+server configuration : 
+# nano /etc/rsyslog.conf 
+
+// determine a a clients send tcp / udp module or both and uncomment it 
+
+# and add line , ip of server , *.* any facilities and any priority  
+*.* 	@192.168.58.128
+
+# systemctl restart rsyslog.service 
+$ sudo firewall-cmd --add-service=syslog --permanent 
+$ sudo firewall-cmd --add-service=syslog 
+
+
+# when do a log client/ server , and have a old configuration , store a logs in two send to server and store it local depend on config 
+
+
+#================================================================
+# work with journalctl -> show  a systemd.journald
+# store as structured indexed journal 
+# journald -> store under /run/log/journal 
+
+$ journalctl [options]
+$ journalctl 
+
+$ journalctl  -n => number , default return the last 10 logs 
+$ journalctl -n 5
+
+$ journalctl -f => follow a journal
+$ journalctl -p err => get a logs to sepecific priority 
+
+$ journalctl --facility auth => determine a facility 
+
+$ journalctl -u sshd.service => get logs to a specific service 
+ 
+$ journalctl -u sshd.service -o verbose => get detials about service log 
+
+$  journalctl  --since "yyyy-m-d hh:mm" 
+$ journalctl  --since "2025-1-1 9:30"
+
+# --since today  , --since yestertday
+# --since "-1hour"  , --since "-1month" , --since "-1year"
+
+
+$ journalctl  --since "2025-1-1 9:30" --until "2025-1-5 9:30"
+
+// to show a logs during a boot  
+$ journalctl -b 
+
+
+to add more critrias with journalctl can use any of them in the output in the following command 
+$ journalctl -o verbose 
+
+$ journalctl  _UID=1000 
+$ journalctl  _GID=1000 
+ 
+$ journalctl  _SYSTEM_UNIT=sshd 
+$ journalctl  _SYSTEM_UNIT=NetworkManager
+or 
+-u 
+
+# if system reboot more than one time 
+$journalctl -b 1 => the prvious system boot
+$ journalctl -b 2 => the boot before the prvious boot 
+	
+
+#==================================================
+# make  a journalctl presistent a cross reboot and store it under /var/log/journal
+# configuration file 
+/etc/systemd/journald.conf 
+
+Storage=persistent
+# values to Storage 
+- auto : system check in /var/log  , if found a file name journal , store in it logs , if not found /run 
+- volatile : temporary store under /run 
+- persistent : store /var/log 
+- none : drop all logs , not store under /var or /run
+
+
+-> have a some paremeters or variables can discover it 
+
+#===========================================================
+# discover a log rotate 
+=> /etc/logrotate.conf 
+# in normal not configure is depend on size  , is configure depend on a weekly or monthly or yearly do a rotate with interval 
+// can edit in this :
+$ man logrotate 
+
+
+and can read detials of configuration of this file /etc/logrotate.conf and edit int it 
+
+# if found in issue and some of facilities of logs is daily store old logs and start new 
+the same a bootlog  , is some configuration refelect under 
+$ sudo nano /etc/logrotated.d/bootlog 
+
+/var/log/boot.log
+{
+    missingok
+    daily
+    copytruncate
+    rotate 7
+    notifempty
+}
+
+# have a more configuration to log rotate and can edit with show a help of $ man logrotate 
+ /etc/logrotated.d
+
+
+#================================================
+// show a last users access to the system
+$last 
+
+// reports the most recent login of all users or of a given user
+$lastlog 
+#============================================================================
+maitian Accurate Time : 
+- maitian accurate time synchroniztion with Network time protocol (NTP) 
+and configure the time zone to ensure the correct time stamp for events recorded 
+( journal logs (is a critical time for logs) , rsyslog ) 	
+
+// get a current settings (date , time , ntp)
+$ timedatectl 
+
+// to show a database of time zones can change to it , timezones provides from (IANA)
+$ timedatectl list-timezones
+
+// change a timezone , with interactive shell ,	
+$ tzselect 
+but in run time if want paramenant => appand a a follwoing line under .profile 
+TZ='Europe/Sofia'; export TZ
+
+or 
+$ timedatectl  set-timezone America/Godthab  
+// change parmenant 
+
+// change time 
+$ timedatectl set-time 9:00:00
+
+// to disable ntp 
+$ timedatectl set-ntp false
+
+// change ntp server 
+$ timedatectl ntp-server [url]
+
+
+# ntp service is a chronyd.service this implementation to ntp 
+
+chronyd : is a lightweight ntp implementation designed to syn 
+the system clock and time with external time sources (Ntp servers )
+
+
+#=============================
+// to check a stratum number to ntp
+$ chronyc tracking 
+
+// check sources ntp
+$ chronyc sources ntp 
+$ chronyc sources -v 
+
+# configuration file to ntp , 
+/etc/chrony.cong   
+
+
+# task to add server as ntp server 
+# add a line to server ntp in config , use a public server from a a pool public 
+
+server 	class.ex.com 	ibtrust 
+
+logs to chrony: 
+/var/log/chrony
+
+#==============================================================

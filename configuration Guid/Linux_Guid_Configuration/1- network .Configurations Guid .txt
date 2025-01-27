@@ -1,0 +1,158 @@
+types of configurations :
+- Gui 
+- nmcli 
+- nmtui 
+
+device  (NIC)
+network profile or connection : is a collection of related configuration using setting for a single network device 
+
+commands : 
+// show a link without ip 
+$ ip link show 
+$ ip -br address show 
+// to show a staticties 
+$ip -s address show 
+
+
+
+//show ip address 
+$ ifconfig <-> part of package net-tools 
+$ ip -br address show 
+$ip -s address show 
+// can use to watch live 
+$watch ip -s address show
+
+// monitor nics 
+$ ip monitor all
+
+// list a interfaces (devices)
+$ls /sys/class/net/
+
+#===================================
+/etc/hosts -> hosts file 
+/etc/resolve.conf : is dynamically managed , auto detect an dns from connection settings and can edit in it 
+/etc/NetworkManager/system-connections/ => under connection files and can edit in it 
+
+/etc/nsswitch.conf (related to dns config )  -> another config file to network , lt, it attempts to resolve
+the query by first using the /etc/hosts file.
+
+dns configurations under /etc/hosts 
+
+#=====================================
+// netstat , ss (socket state)  -> to show ports and sessions opens , port listen
+ss or netstat : 
+[options]
+-l : show only listening sockets 
+-t : Tcp ports 
+-u : udp ports
+-n: Show numeric addresses and ports instead of resolving hostnames.
+-p :show process using this socket 
+-P : show numric port 
+
+$ netstat -ntp 
+$ netstat -ltnp 
+
+#==========================================
+// show a routing table : 
+$ route 
+$ route -n 
+$ route del default gatway 192.168.58.1
+$ route add default gatway 192.168.58.1
+#====================================
+nmcli : network manager cli 
+// show devices 
+$ nmcli device show 
+
+// show a device status 
+$ nmcli device status 
+
+// show a connections
+$ nmcli connection show 
+
+// show conncetion to a specific connection  , get more detials about it   
+$ nmcli connection show ens160[con-name]
+
+// add connection : 
+ nmcli connection add con-name my-con type ethernet ifname ens160 
+ipv4.addresses 192.168.58.100/24 ipv4.gateway 192.168.58.2
+ ipv4.method manual ipv4.dns 4.4.2.2,8.8.8.8  connection.autoconnect yes 
+connection.autoconnect-priority 50 con.zone public 
+
+- auto-connect when reboot 
+- priority a higher priority to connection 
+=> priority by default is =-999 
+=> methods -> manual or Automatic 
+
+
+
+// delete or modify connection
+$ nmcli connection delete my-con 
+ $ nmcli connection modify my-con +ipv4.addresses 10.10.10.50
+// in modfiy to add in the old use + 
+
+// to up / down a connection 
+$ nmcli connection up
+$ nmcli connection down 
+$ nmcli reload connection 
+reload :  is used to reload the configuration of network connections in NetworkManager.
+use case if modfiy to apply a changes -> reload 
+
+// enable device 
+$ nmcli device connect ens160
+or 
+$ nmcli device up ens160 
+
+// disable devcice 
+$ nmcli device disconnect ens160
+or 
+$ nmcli device up ens160
+ 
+// cloning connection 
+$ nmcli connection clone my-con my_new_con
+
+
+//used to monitor network changes in real-time on your Linux system
+$ nmcli monitor 
+// display permissions required to manage and operate network using Network maanger 
+$ncmli gen permission
+
+// to check network connectivity 
+ $ nmcli networking connectivity check 
+
+ 
+another tool 
+$ nmtui 
+#===================
+Test commands : 
+
+$ ping -I ens160 -c 4 8.8.8.8
+-I : determine interface out ping from it 
+
+$ping6
+
+$ tracepath 
+$ tracepath6 
+
+$ nslookup 
+$ dig  
+
+#================================
+notes : 
+DHCP automatically rewrites the /etc/resolv.conf file when interfaces are
+started, unless you specify PEERDNS=no in the relevant interface configuration files.
+Set this entry by using the nmcli command.
+
+[root@host ~]# nmcli con mod "static-ens3" ipv4.ignore-auto-dns yes
+
+#========================================
+/etc/hosts
+/etc/resolv.conf
+resolve domain   1-cache   2-hosts file  3- dns resolver (nameserver 8.8.8.8)   
+   
+hostname   test10       -----runing config
+hostnamectl   set-hostname   test10     ----runing config and permanent config(/etc/hostname)
+
+nano /etc/hostname ---test10 --- effect on next reboot
+
+#=================================================
+# can chanage a naming convension to network devices to old by passing paramters to kernel when intilize 

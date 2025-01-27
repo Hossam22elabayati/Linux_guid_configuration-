@@ -1,0 +1,201 @@
+Linux Boot process ( sequence ) : 
+
+-> Boot loader 
+-> Boot loader issue 
+-> set Grub passowrd 
+-> root passord rest -> in Ex200
+-> systemd 
+-> systemd targets 
+
+#======================================================
+-> Boot sequence :
+ 	- power on : electric connect to moadtherboard , go to (firmware) -> Bios or uefi 
+		- the first part in Bios check on main resources 
+1- power on self test (POST) 
+	some of commands store in rom , execute a group of checks on hardware main components 
+2- Bios or UEFI : some configuration بيكمل اعدادته  
+	- show a boot order -> first boot device (hard disk)
+	- hard disk (MBR , GPT)
+
+3- mbr (partition table 64 byte , bootloader 446 byte , magic number 2 byte ) 
+	- go to a bootloader a first stage -> is refernce to second stage , need more space size 
+	- second stage to bootloader -> /boot/grub2/grub.cfg 
+
+4- Grub 
+	- draw a grub menu to choose a boot os or kernel , and have a default choose and timeout  , use in dual boot 
+	- and two kernels , if update a kernel  
+	- role reference to location of kernel of os 
+	
+5- kernel  two files ( vmlinuz , initramfs )
+	- initramfs (intial ram file system)  , contain ( modules & drivers ) --> intilize a hw 
+	- load the first process systemd.journald 
+	-Inside initramfs completly file system / -> /boot , /sysroot 
+	- mount /dev/sda1 -> /sysroot (ro (read only)) and do some tasks : 
+		- finding and mounting the real root filesystem , change root to your Fs 
+		- setting up /dev or raid settings or decrypting partition or loaded addtional modules 
+	
+/sysroot  : directory is a temporary mountpoint used during boot process by initramfs , to mount 
+the root file system 
+
+initfsram executes the switch_root , pivot_root operation to replace a temporary rootfs with the ( real root fs )
+/sysroot become ---> / 
+
+-> control is passed to init or systemd 
+-> systemd-journald (first process) : collect logs from a initramfs to boot success 
+	- re-execute itself and settings from hard disk , 
+	- then execute a default target 
+-> systemd targets 
+
+##################################################################
+init vs systemd :
+init : 
+	- sequential start to services
+	- logs , service responsible to logs rsyslog , work after booting after init
+	- run unit files with unit script file 
+service management command : 
+$ service name [action]
+$ service httpd [stop] , [status] , [start]
+
+work with run levels from 0 to 6 , 
+- compatibiltie with a systemd -> redirect now any thing command to systemd 
+
+run levels : 
+0 -> poweroff
+1 -> rescue / single user 
+2 -> multi user without network support 
+3-> multi-user , with netwokr support 
+4 -> user-defined , or unused 
+5->graphical 
+6 -> reboot 
+
+$ init 5 or 0 | 1 |2 any number 
+// to show runlevel 
+$ runlevel 
+
+default runlevel -> /etc/initab  
+
+systemd : 
+- start service in parelle -> can view -> $pstree 
+- unit files is a key = value (  easy from scripts and speed up )
+- logs with systemd-journald from the boot 
+- systemd compatibile with init 
+- use a systemctl command 
+
+systemd targets :-> same init and more 
+$ systemctl get-default 
+// change a default target 
+$ systemctl set-default multi-user.target 
+
+// to switch to another target to show 
+$ systemctl isolate multi-user.target 
+
+// any thing default effect in next reboot 
+
+take a file of target as a soft link under 
+/etc/systemd/system/default.target [unit file]
+
+
+// show under it all service up with startup and created a symbolic links 
+$ ls /etc/systemd/system/multi-user.target.wants |  wc -l
+
+
+notes from book : 
+a target can be a part of another target , ex graphical.target includes ( multi-user.target )
+// to check 
+
+$ systemctl list-dependencies graphical.target | grep target 
+
+
+$ systemctl list-units --type=target --all
+
+$ systemctl cat graphical.target 
+// inside it a -> not all can do isolate if , allowed only -> some of .target or more support a modes to me 
+AllowIsolate=yes 
+#=========================
+// to any problem in initramfs , have a service dracut to troubleshoot initramfs 
+/etc/dracut.conf or .d
+
+#==========================
+/boot/grub/grub.cfg  -> not recommanded edit in it 
+ 
+// config to grub menue
+/etc/default/grub
+
+command to change in default config :  grub2-mkconfig  , generate new grub and apply changes in the original grub file 
+$ grub2-mkconfig -o /boot/grub2/grub.cfg 
+// change in default boot file 
+
+#===============================
+When you press e in the GRUB menu, you enter GRUB's edit mode -> e 
+// i don’t wanna a user press e and go to this step , i want do a 
+-> Grub password 
+$ grub2-setpassword 
+enter : 
+
+// generate a encrypted file -> /boot/grub2 -> user.cfg  ( put in it sha to grub password)
+// to break a grub passowrd need a live cd and remove a file -> user.cfg 
+#=================================================
+// change a system unit , when start from grub , is a temporary 
+e 
+in linux line go to the end and write -> press end 
+systemd.unit=multi-user.target 
+
+#================================================
+-> Reset a root password :
+e -> edit and press end and write 
+rd.break  -> need to troubleshoot or repair the system before the root file system is mounted 
+or 
+rw init=/bin/bash -> when you want direct access to a bash shell with root filesystem already mounted but read-wite 
+
+
+Method 1
+press  e
+
+rd.break         press  CTRL+X
+// open a rescue.target , mount system in /sysroot 
+$ mount -> say your system is show from /sysroot mount point and i ro ( read only)
+
+mount -o remount,rw   /sysroot
+
+mount  ------>show , change access to this root  , take ownership 
+chroot /sysroot
+
+
+passwd
+touch /.autorelabel  -> autorelabel se-linux in shadow file 
+exit
+exit
+
+#######################################
+ress  e
+
+           rw  init=/bin/bash        press  CTRL+X
+
+passwd
+touch /.autorelabel
+exec   /sbin/init
+
+#############################################
+note : 
+-	When rest root password , break boot process في مرحله متقدم  , 
+selinux disabled , and execute command passwd in file /etc/shadow
+
+-Edit in file shadow but se linux disable , label of shadow with se-linux remove  
+
+-.> need auto relabel -, relabel this password change with default context db 
+############################################
+
+note imp :
+
+The system has not yet enabled SELinux, therefore any file you create does not
+have SELinux context. Some tools, such as the passwd command, first create
+a temporary file, then replace it with the file that is intended for edit, effectively
+creating a new file without SELinux context. For this reason, when you use the
+passwd command with rd.break, the /etc/shadow file does not receive SELinux
+context.
+
+
+
+chroot: This command changes the root directory (/) for a process to a specified location.
+ It effectively makes the specified directory look like the top-level root directory
+ (/) for that process and any of its child processes.

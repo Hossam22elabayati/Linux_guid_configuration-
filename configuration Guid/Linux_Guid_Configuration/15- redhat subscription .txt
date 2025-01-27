@@ -1,0 +1,22 @@
+// regiester by username and password 
+ $ subscription-manager register --username <yourusername>
+
+
+// View available subscriptions for your Red Hat account
+$ subscription-manager list --available
+
+//Auto-attach a subscription
+$ subscription-manager attach --auto
+
+//View consumed subscriptions
+$subscription-manager list --consumed
+
+
+// unregiester 
+$ subscription-manager unregister
+
+
+certification :
+/etc/pki/product certificates indicates installed Red Hat products.
+• /etc/pki/consumer certificates identifies the Red Hat account for registration.
+• /etc/pki/entitlement certificates indicate which subscriptions are attached

@@ -1,0 +1,142 @@
+Stratis :  new feature هو اختصر الموديل بتاع  LVM  + new features in starits and easy 
+
+Block devices -> assign direct to pool == (phyiscal Volume + Volume Group  ) -> then file system  assign 
+
+// from pool Take a file system and take a size Automatic  <-> file system work with pool direct ( thin provisioing )
+---> in LVM assign size fixed  
+
+########################################################################################
+striats : 
+is a local storage managment solution for Linux , it is Focused on simplicity and ease use , and give us access 
+advanced features 
+
+striats concept -> storage pool 
+this pool is created one or more local disks or partitions and Volumes are created from the pool 
+
+pool enable many useful features : 
+	- file system snapshots 
+	- thin provisioning 
+	- Tiering 
+
+Components of striats : -> three components 
+	- Block devices ( Disk & partitions )
+	- pool 
+	- file system  
+
+// from pool can create a one or more file system 
+note : 
+// can apply striats above level LVM but not recommanded 
+
+
+##################################################################################
+my pool create under pool name -> stratis 
+when create a pool create a directory/stratis 
+when create a file system put under /stratis/my-pool/fs
+/stratis/my-pool/my-fs -> path
+
+my path -> is /stratis/my-pool/my-fs -> not /dev 
+
+#########################################
+stratis layer : Two views 
+-> user view : (me )
+work with three components ( Block-dev , pool , File system )
+
+
+-> internal view  : to system view 
+device mapper ( integrity)
+device mapper-raid 
+dm-cache 
+dm-thinpool 
+dm-thin 
+xfs 
+file system 
+
+############################################
+straits support a group of devices work with it :
+	- LUKS 
+	- LVM 
+	- MD RAID 
+	- DM Multi-path 
+	- ISCSI
+	- HDD , SSD 
+	- NVME 
+
+##############################################
+Configuration :
+#  cat /etc/*release*
+ 
+#  dnf install stratisd stratis-cli
+
+ # systemctl status stratisd.service 
+
+ # systemctl start stratisd.service 
+
+// create stratis or pool  
+ # stratis pool create pool-0 /dev/sdb 
+
+or add your disks : 
+# stratis pool create pool-0 /dev/sdb /dev/sdc /dev/sdd 
+
+// check a pool 
+# stratis pool list
+
+// expand a pool capacity 
+# stratis  pool add-data pool-0 /dev/sde 
+
+# stratis --help
+
+//show a physical devices assigned to a pool 
+# stratis blockdev list 
+
+// create a file system from pool 
+// xfs file system -> This is because XFS is optimized for high-performance workloads, scalability, and handling large files
+
+# stratis filesystem create pool-0 myfs-0
+
+// check 
+ # stratis filesystem list 
+
+# ls -l /dev/stratis/pool-0/myfs-0 
+mapping to device and have a UUID 
+
+// mount the file system as a mount point 
+# mount /dev/stratis/pool-0/myfs-0  /mnt/dir-str/
+
+$ df -TH 
+// show a size وهمي    -> to show actual size create a data  
+1T 
+/dev/mapper/stratis-1-be592c0ad8ec40ddb787084231ea34ed-thin-fs-8908c7f20b4a4dc6a2893a29cfbb9df7 xfs       1.1T  7.7G  1.1T   1% /mnt/dir-str
+
+# facllocate -l 2G /mnt/dir-str/file-h
+
+// check 
+ # stratis filesystem list 
+
+# df -TH 
+
+// mount presistent , to start in startup 
+UUID=8908c7f2-0b4a-4dc6-a289-3a29cfbb9df7 /mnt/dir-str/ xfs defaults 0 0
+
+# systemctl daemon-reload
+# mount -av 
+# findmnt -x 
+
+
+
+// take a snapshot from fs 
+# stratis filesystem snapshot <poolname>  filesystem filesystem-snapshot
+
+# stratis filesystem snapshot pool-0  myfs-0 my-snap-fs0
+// check created snapshot 
+# stratis filesystem list 
+
+// can mount this snapshot , and show the same data 
+
+
+// delete a fs 
+// show umoutn because is busy 
+# stratis filesystem destroy pool-0 myfs-01-snap 
+
+##############################################3
+benefit from straits a thin provisioning .
+

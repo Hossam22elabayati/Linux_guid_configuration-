@@ -1,0 +1,382 @@
+detect new hard disk without reboot :
+for host in /sys/class/scsi_host/*; do echo "- - -" | sudo tee $host/scan; ls /dev/sd* ; done
+
+tools used with hard disk : 
+gdisk , fdisk , parted 
+
+-> fdisk : for mbr , not ideal for a gpt 
+-> gdisk : designed to manage disk with ths Gpt ( GUID partition table ) 
+-> parted : tool for managing both ( mbr & gpt ) partitions , useful work for large disk and support 
+advanced partitiong  like resizing & alginment 
+
+Resize & shrink can done with : 
+parted or resize2fs (with File system (ext2,ext3,ext4)) 
+
+# only resize the next unallocated space 
+ex : 
+$ parted resizepart 2 100G 
+$ resize2fs /dev/sda2 
+
+// shrink : 
+$ resize2fs /dev/sda2 10G 
+
+######################################################################
+// commands use :  lsblk , blkid , df , du , fdisk , gdisk , parted || mkfs || mount 
+// show an available block devices : 
+$ lsblk 
+
+// to show with uuid , and some detials 
+$ lsblk -f 
+
+// report file system disks 
+$ df 
+$ df -T
+$ df -TH
+$ df -THi 
+-i : inode details used and free 
+
+// show disks and partitions :
+$ fdisk -l 
+$ gdisk -l -> gpt 
+$ parted /dev/sda print 
+
+####################################################
+hard disk ( raw space ) <-> added partition style or schema mbr or gpt : 
+the smallest unit in hard disk is sector 512 byte , some new hards is 4 Kilo but the standard is 512 byte 
+mbr vs gpt :
+MBR : 
+- recommanded with Bios 
+- store mbr in the first sector in hard disk , mbr contain ( partition table 64 byte , 446byte  Boot loader , 2 byte magic number) 512byte 
+ partition table : store boundries of partitions (start from sector number كذا  to sector number كذا) , Magic number ( show mbr corrupted or not)
+
+- partition table store details : 
+Store start -> 4 byte ||  end  to partition -> 4byte  || type || flags (bootable or not)  -> another take a 8 byte 
+-> 16 byte * 4 =64byte , maximuim a 4 partitions 
+
+- partition types : primary , extended (container ) : contain a logical volumes 
+-Limitation of logical volumes do in extended (os based , common 23 logical volume ) , maximum number of logical patitions 
+ 
+Extended partition : can’t put a file system in it have a partition table private to logical partitions 
+name as -> EBR (extended Boot record ) : used for logical partitions
+ 
+takes up 16 bytes and is linked for each logical partition 
+-	EBR is 512 byte one sector in the first
+Each logical partition within the extended partition has an EBR, which contains:
+•	Partition Type 1 byte
+•	Start 4 byte and End LBA 4byte  (Logical Block Addressing)
+•	Link to next EBR 4 byte (if any, to chain multiple logical partitions together)
+Bootable flag 1 byte 
+Other metadata 
+
+MBR addressing is 32 bit for sectors  , then the max disk can handle 
+-Partition table , the maximum number of sectors that can be addressed is 2^32,
+ which equates to 2,199,023,255,552 bytes, or roughly 2 TB 
+sector1 , sector2 and to sector 2,199,023,255,552
+
+4G sector * 512 = 2T -> 2048 G 
+
+note : if a boundaries of partition lost , lost a data can’t reach 
+
+-	If have a disk 2.5T and do it MBR , he lost a 500 mega from disk can’t use
+-	Windows max number 26 letter to drive , after it use a mount point  
+
+-----------------------------------------------------------
+GPT : 
+recommended with UEFI , but support to BIOS , UEFI
+-The first sector 512 is a protective mbr   -> not used but to protect your disk , if connect to old devices 
+- Store in the first and in the end of hard disk to backup  
+-Then header contain information about hard disk and his size 	-> and take 92 byte 
+-Then build  partition table , each partition entry have a 128 byte , Gpt allow to 128 partition entry 
+- 128byte * 128 entires =16,384bytes (16KB)
+
+-Max partitions 128 primary partitions can do
+-Take a copy from header & partition table in the end of hard disk as a backup to any corruption happen   
+-Addressing is 64 bit  , 2^64 , the number with 9.4  zeta size -> 1 billion tera 
+-GPT can support disks up to 18 exabytes (EB), significantly larger than the 2 TB limit of MBR.
+-Another way to backup : 
+-Cyclic Redundancy Check (CRC32): GPT uses CRC32 checksums for integrity verification of the header and partition table, which helps detect corruption and data issues
+
+####################################################
+disk when do a format or put a file system : 
+contain some blocks : 
+	Data block : block of data 
+	supert block : store information
+	journal block : 
+		- logs to mydisk in journal block 
+		- troubleshooting ( from info in journal block ) , to any problem like a bad sector 
+
+// some issue in partitions -> bad super block 
+The superblock contains metadata about the filesystem	
+
+stored in disk as a part of partition 
+
+Filesystem Structure Example (ext4):
+- Superblock: Contains metadata about the filesystem.
+- Group Descriptors: Indexes and manages data blocks and inodes.
+- Inodes: Store file metadata (e.g., permissions, ownership, location of data blocks).
+- Data Blocks: Store the actual file content.
+- Journal: Logs changes for crash recovery (if journaling is enabled).
+###############################################
+work with new hard disk : by-default take Dos partition style mbr 
+// work interactively 
+$ fdisk /dev/sda 
+
+or 
+
+$ gdisk /dev/sda 
+
+or 
+// parted can work interactively or non-interactivley in configuration 
+$ parted /dev/sda 
+
+after edit your configuration run a command 
+$ partprobe /dev/sda 
+#####################################################
+parted options and work with it : work with number , sizes accept -> KB , MB , GB , S sector 
+#parted /dev/sdX print
+#parted /dev/sda mklabel gpt
+#parted /dev/sda mkpart primary ext4 1MiB 20GiB
+// shrink or extended  from partition give it the end 
+#parted /dev/sda resizepart 1 50GiB [end]
+# parted /dev/sda resizepart 1 100%
+
+#parted /dev/sda rm 2
+
+#parted /dev/sda uint s print 
+
+# parted /dev/sdX print free
+
+// in script mode : 
+# parted -s /dev/sdX mklabel gpt mkpart primary ext4 1MiB 20GiB
+
+
+-> rescue in parted , if have a lost space and want to added 
+
+. // Wait for Udev to Process the Changes
+# udevadm settle -> nsures that partition changes made by parted are fully processed by the system.
+# partprobe /dev/sdX
+
+script : 
+#!/bin/bash
+
+# Create a new partition
+parted -s /dev/sdX mklabel gpt
+parted -s /dev/sdX mkpart primary ext4 1MiB 20GiB ->
+not here -> partition type not actually a file system type ext4 , the same in fdisk Linux 
+
+# Wait for udev events to settle
+udevadm settle
+
+# Notify the kernel of partition changes
+partprobe /dev/sdX
+
+# Create a filesystem on the new partition
+mkfs.ext4 /dev/sdX1
+
+# Mount the new partition
+mount /dev/sdX1 /mnt
+
+
+####################################################
+// mount 
+$ mount -> only , imp to show a details of mounted files systems now and presistent in fstab 
+$ mount /dev/sda1 /data1 
+$ umount /dev/sda or /data1 
+$ mount -av -> mount again all file systems 
+$ mount -o ->add options 
+#####################################################
+fstab format to this file: 
+// after mount a partition to get a details : 
+$ cat /etc/mtab 
+
+fstab format : 
+Dev_name		mount_point 	file_system_type	permission 	dump 	fscheck 
+/dev/sda2		/data		xfs		default 		0	0
+
+dev_name -> can use a label or /dev/sda2 or uuid (recommanded)
+permissions -> if files system not support a ACL -> can added ||  default,ACL
+
+$ mount -o remount,rw /dev/sda1
+Mount options : rw (read write ) , ro (read only) , 
+execute (happen executable file inside it ) or no execute  ,          
+    defaults (inside it (rw , execute ,no user , suid , dev , async )  ) 
+ can write defaults  , in some special case show want to use 
+
+dump : 
+backup from filesystem and same check dump order 0 no dump , 1to 9 dump 
+
+fscheck : xfs not supported put with zero , 
+0
+1
+2
+system for example , electric poweroff force need to check 
+Work with ext4 only , not work with xfs have another check , ext4 want to check give number another 0 from 1 to 9 priority 
+Or 
+Poweroff crash  , use tool fsck
+
+- Filesystem check to check integrity and any corrupted file 
+
+sometimes system stuck because hard disks and enter to emergency mode , need to solve this probelms in fstab file 
+fschek =0 or othr ways and change corrupted hard disk 
+
+after add a line in fstab run : 
+# mount -av 
+// to check 
+# findmnt --verify or -x 
+// who mounted in fstab 
+# findmnt --fstab
+
+recommanded run this command after fstab : 
+# systemctl daemon-reload 
+######################
+uuid ( unique unvirsel idetifier )
+
+########################################################
+set a label : 
+ext2, ext3, ext4
+  # e2label /dev/sdX1 new-label
+// check a label 
+# e2label /dev/sdX1
+
+
+alternative method to put a label to partition : 
+# tune2fs -L new-label /dev/sdX1
+
+xfs :
+$ xfs_admin -L new-label /dev/sdX1
+// check a label : 
+# xfs_admin -l /dev/sdX1
+
+ntfs : 
+$ ntfslabel /dev/sdX1 new-label
+
+btrfs : 
+$ btrfs filesystem label /dev/sdX1 new-label
+
+
+swap label : 
+$ mkswap -L new-label /dev/sdX1
+
+
+
+##########################################################
+make a file system : 
+mkfs. 
+or 
+# mkfs -t ext4 /dev/sda1 
+# mkfs -t ext4 -i 16384 /dev/sda1 
+or 
+-N -> specify number of inodes 
+# mkfs.ext4 -N 50000 /dev/sdX1
+
+tune2fs - adjust tunable file system parameters on ext2/ext3/ext4 file systems
+
+##################################################
+demo : 
+1-Create a pt [with parted ]
+2-Make fs [mkfs]
+3-Mount fs [] -> in a mount point to use -> and note it is temporary 
+4-Want to do a persistent mount across reboot
+
+demo solution : 
+parted /dev/sda mkpart primary  ext4 1M 2G   
+mkfs -t ext4 /dev/sda1 
+mount /dev/sda1 /data/
+# cat /etc/mtab 
+/dev/sda1 /data ext4 rw,seclabel,relatime 0 0
+or with uuid 
+blkid /dev/sda1 
+
+// put line under /etc/fstab 
+verfiy : 
+$ systemctl daemon-reload 
+$ mount -av 
+$ findmnt -x 
+$ findmnt --fstab 
+
+
+################################################
+Virtual memory swap : 
+$ free 
+$ free -m 
+$ free -h 
+- swap on , swap off -> mount and umount 
+mkswap 
+swap can be a partition or file work as a swap
+ 
+steps to create a swap partition : 
+=> create a partition recommaned give a type if swap 
+
+# mkswap /dev/sda2
+# swapon /dev/sda2
+# swapon -s 
+
+To unattached  , deactivate swap partition : 
+$ swapoff /dev/nvme0n2p2
+
+// want to persistent (swap) -> put in fstab  
+$swapon -av 
+
+----------------------------
+steps to create a swap file :
+
+$ touch SwapFile
+$ ls -l SwapFile -> size is 0
+// I want a file have a dedicated space 
+
+// disk dump , file with specific size 
+$ dd if=/dev/zero of=/SwapFile bs=1M count=1024
+
+if -> input file , copy from source 
+of -> output file destination 
+/dev/zero is a character special file 
+bs = block size 
+count = عايز كام بلوك  
+
+$ ls -l SwapFile 
+recommnaded permission to file swap 600
+# mkswap /root/file1 
+# swapon /root/file1 
+// show 
+# swap -s 
+
+add to fstab: 
+UUID="7acedcdf-0c41-4652-b50e-756956076b11" none        swap       pri=5 	0      	0
+UUID="7acedcdf-0c41-4652-b50e-756956076b11" none        swap       swap or defaults 	0      	0
+
+$ systemctl daemon-reload 
+$ swapon -av 
+$ findmnt -x 
+$ findmnt --fstab 
+
+
+################
+can change priority to swap device : 
+swapon /dev/nvme0n1p5 -p 10   # Set the priority to 10
+or in fstab 
+/dev/nvme0n1p5 none swap sw,pri=10 0 0
+
+
+Higher priority values mean that swap device will be used more frequently.
+#####################################3
+take a backup from mbr : 
+$ dd if=/dev/sdc	of=/root/mbr_backup 	bs=512  count=1
+
+$ fdisk -l /dev/sdc 
+
+
+// corrupt a mbr 
+$ dd if=/dev/zero	of=/dev/sdc	bs=512	count=1
+
+// restore with backup 
+$ dd if=/root/mbr_backup 	of=/dev/sdc	bs=512	count=1
+
+##################################################################
+$ lsblk -o NAME,PHY-SEC,LOG-SE
+
+Make a new ext4 file system on the new logical partition you just created. Bonus:
+ Try creating the ext4 filesystem with 2k blocks and one inode per every 4k (two blocks) 
+of filesystem :
+# mkfs -t ext4  -b 2048 -i 4096 /dev/sda5
+
+ 

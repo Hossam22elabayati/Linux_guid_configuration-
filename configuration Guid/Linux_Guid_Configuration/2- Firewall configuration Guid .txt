@@ -1,0 +1,234 @@
+manage Firewall in Linux : 
+
+Firwalld  work with zones & Rules 
+
+- Linux kernel includes Netfilter a 
+framework for network traffic operation such as 
+packet filter , Nat , port translation 
+
+- netfilter primary component in RHEL 9 Linux 
+
+- nftables ( framework enhancment above a netfilter )
+
+-> nftables builds upon netfilter framework to apply fw rules to network traffic 
+
+
+* firewalld service : is a dynamic fw manager ,
+ frontend to nftables framework (backend)
+
+
+* firewalld managment by classifiying network traffic into zones , 
+every zone depend on critrias 
+
+
+###########################################
+$ systemctl status firewalld.service 
+
+###########################################
+-> firewalld : service get with a group of predefined zones & services 
+stored under : 
+
+$ ls /usr/lib/firewalld/services 
+$ ls /usr/lib/firewalld/zones 
+
+// this written by xml 
+
+// can add in a predfined service or 
+predefined zones 
+
+-> add 
+
+// list pre-defined services ., and available services  
+$ firewall-cmd --get-services 
+
+// list pre-defined services ., and available services  
+$ firewall-cmd --get-zones
+
+// get active zones work in interfaces 
+$ firewall-cmd --get-active-zones 
+------> default zone , applied if no zone -> public 
+
+// get default zone
+$ firewall-cmd --get-default-zone
+//change a default zone
+$ firewall-cmd --set-default-zone=dmz 
+
+###############################
+// if service of firewalld is not active and want to execute a command with firewalld 
+$ firewall-offline-cmd --zone=public --ad-service=ssh 
+###############################
+Fw check depend on : 
+1- source address ( incoming traffic ) , apply rules in src ip address 
+2- icoming a network traffic 
+3- not in any network traffic , apply default zone rules 
+
+#############################################
+configuration files and active zones , service : 
+	/etc/firewalld 
+and can edit any configuration :
+	/etc/firewalld/firewalld.conf 
+######################################
+// in add or modify connection can add con.zone 
+$ nmcli connection modify ens160 con.zone DMZ 
+######################################
+
+Configuration of firewall : 
+	-> Run time ( any reload / restart ) طارت 
+	-> permanant ( store /etc/firewalld/zones)
+
+####################################
+example of configuration :  add service 
+	$ firewall-cmd --add-service=ssh  // added it runtime 
+	$ firewall-cmd -add-service=ssh --permananet  => // store /etc/firewalld/zones/public.xml , store in xml file 
+#####################################
+$ firewall-cmd -add-service=ssh --zone=public --permananet  
+// if not add zone apply on public 
+
+$ firewall-cmd --reload  => remove any thing in run time ,
+
+// if need to some things in run time reun command twice 
+$ firewall-cmd --add-service=ssh  // added it runtime 
+$ firewall-cmd -add-service=ssh --permananet 
+
+########################################
+$ firewall-cmd --list-all -> detials show 
+
+- sources :  ip or network/24 
+- ports : 80/tcp 
+- protocols : ipv4 
+- forward : yes , -> allow packets to be forwared between interfaces or zones 
+- Masquerad : yes or no(default) 
+	- if nat enable for outgoing traffic 
+	- used for internet sharing in gw configurations 
+- forward-port : in the end 
+- source-ports : 12345/tcp , machine are allowed 
+- icmp-blocks : 
+	- icmp-block : echo-request (block ping )
+- rich-rules ( allow, deny) : advanced rules , allow more complex configurations 
+	- determine a source ip or network 
+
+##########################################
+
+########################################
+// add port 
+$ firewall-cmd --parmanent --add-port=2222/tcp 
+$ firewall-cmd --reload 
+$ firewall-cmd --list-ports
+
+// add range of ports 
+$ firewall-cmd --parmanent --add-port=5901-5905/tcp 
+$ firewall-cmd --reload 
+$ firewall-cmd --list-ports
+
+##############################################
+// remove service port , range port , service 
+$ firewall-cmd --permanent --remove-service=smtp
+$ firewall-cmd --reload 
+$ firewall-cmd --list-services 
+
+$ firewall-cmd --permanent --remove-port=22/tcp
+$ firewall-cmd --reload 
+$ firewall-cmd --list-ports
+
+$ firewall-cmd --parmanent --remove-port=5901-5905/tcp 
+$ firewall-cmd --reload 
+$ firewall-cmd --list-ports
+
+####################################################
+
+// create a new zone : 
+$ firewall-cmd --permanent --new-zone=myzone 
+
+// add interface 
+$ firewall-cmd --permanent --new-zone=myzone --add-zone --add-interface=eth0 
+
+// add a connection to zone  , not a device 
+or 
+--remove-interface
+// add services 
+$ firewall-cmd --permanent --zone=myzone --add-service=http 
+$ firewall-cmd --permanent --zone=myzone --add-service=ssh 
+$ firewall-cmd --permanent --zone=myzone --add-service=ftp 
+
+$firewall-cmd --reload 
+
+$ firewall-cmd --zone=myzone --list-all 
+
+#######################################################
+// list icmp , can be configured on server 
+$ firewall-cmd --get-icmp 
+
+$ firewall-cmd --help 
+
+$  firewall-cmd --add-icmp-block=echo-reply
+ $ firewall-cmd --list-icmp-blocks 
+
+// Query whether specific ICMP block type is enabled. To verify run the command;
+$ firewall-cmd --zone=public --query-icmp-block=echo-reply
+
+convert runtime to parmanent rules : 
+$ firewall-cmd --runtime-to-permanent
+$ firewall-cmd --reload
+
+########################################################
+// a rich-rule : 
+$ firewall-cmd --list-rich-rule 
+
+// add rich rule (network subnet ) 
+$ firewall-cmd --permanent --zone=public --add-rich-rule = "rule family="ipv4" source address
+="192.168.1.0/24" service name="http" accept"
+
+
+- > accept / reject 
+- > source address = "192.168.1.0/24" or "192.168.1.5/30" 
+
+########################################################
+some :
+--add-source=cidr [--zone=Zone]
+--remove-source=cidr [--zone=Zone]
+
+
+// list all zones with detials :
+$ firewall-cmd --list-all-zones
+
+#-> Zone can apply in mutiple NICs 
+
+o// to delete zone 
+$  sudo firewall-cmd --permanent --delete-zone=zone1
+
+
+########################################################
+runtime /usr/local
+paremenant ->/etc/firwalld/zones
+
+########################################################
+// disable ping from firewall or kernel parameters : 
+kerenel parameters : command sysctl -> configure kernel parameters in run time 
+$ sysctl  [option] variable = value 
+
+// do parmenant put  -> /etc/sysctl.conf  -> any parameter add here apply parmenant 
+
+$ sysctl -a -> get all kernel parameters , need icmp things 
+
+$ sysctl -a | grep icmp 
+
+$ sudo sysctl net.ipv4.icmp_echo_ignore_all=0 -> disable 
+$ sudo sysctl net.ipv4.icmp_echo_ignore_all=1 -> enable 
+
+// modify kernel parameters 
+-> this parameters under /proc/sys
+
+################################
+- port Forward : 
+$ setenforce 0
+$ nano /etc/httpd/conf/http.conf -> change port to 8080
+// restart service 
+// need people access with 80 and me change to 8080 
+
+// need people access in 80 , and work in server 8080 -> do a port forwarding 
+$ firewall-cmd --zone=public --add-forward-port=port=80:proto=tcp:toport=8080
+$ firewall-cmd --zone=public -add-forward-port=port=80:proto=tcp:toport=8080 --permanat 
+
+// can forward any port to another 
+
+#############################

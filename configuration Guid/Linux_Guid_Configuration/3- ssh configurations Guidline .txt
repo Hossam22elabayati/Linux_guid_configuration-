@@ -1,0 +1,221 @@
+encryption first : 
+1 - symmetric key : the same key using in encyption and decryption 
+2- Asymmetric key : key-pair , in the first of session exchange a keys , public key , private key (imp key)
+
+-> hossam want to connect to google secure send request , to take a encryption traffic from hossam use 
+a certificate (ssl/tls) inside a certificate a public key , user encrypt with public key and send to google decrypt with 
+private key
+
+digital signature : 
+-> how to check is google certificate is from google , not from attacker in the middle 
+from a digital signature 
+
+take from a certificat Authority (CA) : website reliable from all in certificate give ex : digicert 
+
+my certificate is digital signed with the CA and in it a digital signature to goole 
+
+#===============================================
+ssh (secure shell) : (client / server)
+package apply is (open-ssh) two types install : 
+openssh-server  : to users access my machine ssh 
+openssh-client : to access a machines ssh , and installed by default  
+
+# check installation 
+$ rpm -qi openssh-client 
+$ rpm -qi openssh-server 
+ 
+how ssh work ? 
+1- client is intiates connection 
+	- ssh client sends to connection request to the server port 22 
+2- server sends public key 
+	- server sends public key to client 
+3- client verifies server 
+	- the client check server’s public key in know_hosts (~/.ssh/know_hosts)
+	- if not in file (know hosts) , client prompts user to confirm a key
+known hosts file under .ssh/ : host keys , a public key confirm it , when connect ssh to another stored here
+when ssh to server , confirm a fingerprint yes 
+The SSH fingerprint is a hash of the public key جزء من البابلك كيي هو بيشاور عليه اختصار له اكدت يتخزن عند البابلك كي  in know hosts 
+- if have a public key in knownhosts , not show a confirm of fingerprint 
+
+knowhosts : every server connect to it have a group of keys depend on crypto algorithm (rsa) , server send host keys to client 
+under ~/.ssh/knownhosts
+4- 
+- happen negotition with (client /server) encryption algorithm (diffie-hellman) to do a key exchange step 
+Encrypt challange :
+- client have a public key generate any random text (session key ) and encrypt part of them with public key 
+then send to server decrypt with private key and encrypt part of them with private key and send to client 
+to do 
+
+- a securly generate as shared( session key ) to encrypt communtication 
+
+-> in the start work asymmetric to negotition and do a session key then 
+work symmetric with session key 
+
+5- client Authentication 
+two methods : 
+	- password Autherntication 
+	- publik key Authentication (password less)
+
+6- secure channel established 
+	- secure , encrypted channel is now active (between client /server) 
+
+
+when install openssh-server : 
+- have a public/private key to machine host  , if not do your own private/public to user 
+use a pub/priv to machine 
+
+
+commands : 
+// try to login ssh 
+$ ssh 192.168.150 
+// in this case assume have a user in server with the same name to client want to 
+connect 
+// if user client name hossam , assume want to connect in user hossam in server 
+
+// show processes to ssh 
+$ ps -elf | grep sshd
+
+// ssh syntax 
+$ ssh user_name@ipaddress or [hostname] 
+$ ssh hamin@192.168.1.50
+
+// execute one command and out 
+$ ssh hamin@192.168.1.50 pwd
+
+// if me connect to multiple servers and i want to customize a connections 
+$ ssh azure_linux
+//how to do this , under config ~/.ssh/config if not found creat it , and write inside it 
+$ nano ~/.ssh/config
+content write in file : add essential things to ssh needed 
+Host azure_linux
+   Hostname 192.168.1.60
+   port 22 
+   User hossam
+
+#=========================================
+username and password Authentication , not like from security team use a public key Authentication 
+can do this from utility installed with ssh-client :
+$ ssh-keygen 
+=> client creat a pair  pri/public key  (using default algorithm rsa ) and send public key to server 
+do an encrypt challange ( genarate a random text and encrypt with public key , and you decrypt with private key ) to
+sure private key with you and don’t share with any one 
+
+// change algorithm of encryotion 
+$ ssh-keygen -t ed25519
+
+# note keygen if found a keys overwrite in it 
+$ ssh-keygen 
+under -> ~/.ssh/id_rsa.pub , id_rsa 
+prompt you with passpharse ? 
+passpharse : protect your private key (encrypt it and dycrypt it if write a true passpharse  ) , private key decrypt anything to public key
+protect private key locally , not go through a network but to decrypt with private key should 
+write a passpharse , and if private key reach from another without passphasre no value 
+
+// i want to send a public key client  to a server to connect in it without password 
+-> can copy manual and write in file ~/.authorized_keys 
+~/authorized_keys : in client and server  if install openssh-server , store public key to Authorized users 
+
+or can use , tool or utility with ssh client (ssh-copy-id) , send to server store in authorized_keys by confirm password 
+$  ssh-copy-id hamin@192.168.1.50 
+
+// if move a public key to another place can reference to it with option -i 
+$ssh-copy-id -i id_rsa.pub hamin@192.168.1.50 
+
+// test 
+$ ssh hamin@192.168.1.50 
+// look to a file Authorized key , if found a key use it and test it then login , not 
+login with another way 
+
+ssh agent : 
+with passpharse  , can Automate write of passpharse and not enter manually 
+if connect to more than one server , have a more than one key private and don’t remmber a passords 
+to them 
+
+// can do Automation with tool in open-ssh client -> ssh-agent 
+
+ssh-agent : do a single-sign-on , know a passpharse save it in memory and write it when login 
+and map a passpharses password matches with a private key 
+
+// apply ssh-agent 
+$ ssh-add ~/ssh/id_rsa.pub
+and 
+change permission to private key to 
+-rw---------
+recommanded to 600
+
+#==========================================
+configuration files to ssh 
+/etc/ssh/ssh_config -> configuration to client 
+/etc/ssh/sshd_config -> configuration to server 
+
+# when connect show a banner , can edit in this banner global and add welcom message :
+-> create a file /etc/mybanner -> added your banner here 
+-> in /etc/ssh/sshd_config 
+// in line banner to read it from this file 
+Banner 	/etc/mybanner  
+
+# can edit a port and changed it to 2222  , but note se-linux will alert you 
+
+# another line important edit in it /etc/ssh/sshd_config 
+
+PermitRootLogin prohibit-password
+yes 
+no 
+prohibit-password -> Authenticate with another way key-based , can’t authenticate with password 
+
+// can edit it
+#PubkeyAuthentication yes
+
+#PasswordAuthentication yes
+
+
+#banner 
+# no default banner path
+#Banner none
+
+
+#=================================
+# service use ssh as a Tunnel 
+
+- sftp
+- scp 
+- rsync 
+
+#scp : secure copy  , Transfer directory option is : -r , because copy a directory , with command cp
+$ scp -r file100.tar  dir55/ iti:~/
+or 
+$scp -r file100.tar hamin@192.168.30.1:~/
+
+# can reverse a process  get from server 
+$ scp  iti:/home/hossam/backup_etc.tar.gz .
+$ scp  iti:/home/hossam/backup_etc.tar.gz /home/hamin/
+[path of file ] [location want to put it in it ]
+#========================
+ # rsync
+scp : don’t do a synchronization  , if transfer a big size file and disconnect a session 
+to any reason , return transfer from start
+
+rsync : feature do a synchroniztion between src and destination , if session happen in it disconnect , when return continue from stop point not 
+need to return from start 
+# the same syntax to scp 
+options : 
+-r (recursice) , -v (verbose) ,-z (compress during transfer)
+   
+
+#===========================
+SFTP : open interactive shell
+$ sftp username@ip,hostname
+
+$ sftp iti 
+sftp>--help
+// get from remote server , download 
+sftp> get file1 file2 file3 
+// upload to server 
+sftp> put arch.tar.gz 
+sftp>lpwd -> local pwd 
+sftp>pwd -> to connected server 
+// and more flexbility in commands , can do 
+sftp>bye 
+
+#==================================
+#######################################

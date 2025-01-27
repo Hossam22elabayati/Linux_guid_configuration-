@@ -1,0 +1,154 @@
+Atd (daemon) : command is at , task is run for one time 
+crond(daemon) :command is crontab , task run more than one time 
+anacron : -> ot any down in system do a rerun to scheduling task , missed a time 
+
+#=============================================
+$ at now+10min 
+# write  a commands or add a script want to run for one time 
+#Recommend write a full path to command 
+> /bin/echo "hello" >>/home/hamin/file1
+>
+>
+# exit
+ctrl+d 
+
+// show a sceduling tasks 
+$ atq 
+// can show a scheduling job what contain 
+$ at -c 21 
+
+// to remove a task 
+$ atrm 33 [number for at job ]
+or 
+$ at -r or -d 33
+
+# time formats 
+$ at 10:00am or pm 
+
+Another time formats : 
+$ at now+5min 
+$ at teatime tomorrow
+ 
+// teatime -> 16:00 , اربعه العصر بنسباله 
+$ at 5pm aguest 3 2025
+
+// take myscrpit run
+$ at 21:03 < myscript  
+
+// give my command without interactive shell /bin/sh 
+
+
+$ watch atq 
+
+# show a logs to at 
+# sudo cat /var/log/messages | grep atd
+
+
+#Every user create a scheduling job , create a folder under /var/spool/at , with cron best , create a file with useraname and you jobs schedule it 
+var/spool/at
+
+note :
+Any user can do a scheduling job and control it ,  root can see users jobs and control it and manage all
+root #atq 
+
+# deny/allow users using at 
+$ ls /etc/at*
+at.deny => black list 
+at.allow => white list  -> # by default is not created 
+
+#=============================================
+# scheduling jobs like those created with at or cron run in the background (daemand).
+crontab 
+
+# show a format to crontab 
+$ cat /etc/crontab 
+# fromat of crontab : 
+
+[minutes(0-59)] |  [hours(0-23)] | [day_of_month(1-31)] |  [month(1-12)] or jan , feb , mar |  [day_of_week(0-6)] or sun,mon,wed  | user_name | command to be executed 
+
+some accessibilities :
+* : match all 
+range : 15-16
+or and : 15,16
+*/5 (minutes) -> every 5 minutes 
+
+// every user have a file , to add your cron job 
+$ crontab -e[edit]
+
+/ when open cron open under -> /tmp/crontab when save got to under /var/spool/cron/root
+
+// show a schduling jobs 
+$ crontab -l 
+
+Show under -> /var/spool/cron/root 
+
+Logs : 
+/var/log/cron 
+
+
+$ Crontab -r 
+Remove or can comment your line 
+
+$ crontab -r -> direct run it , remove all scheduling tasks 
+
+// root can do 
+// show a scheduling job to user
+$ crontab -l -u hosam
+
+// edit in user job
+$ crontab -e -u hossam 
+
+// remove  it 
+$ crontab -r -u hossam
+
+
+Another formats can directories : /etc
+Can write in file :
+@weekly 	yourjob 
+@monthly 
+@daily 
+@reboot 
+@hourly 
+@anualy 
+
+[root@serverb cron]# cd /etc/cron.
+cron.d/       cron.daily/   cron.hourly/  cron.monthly/ cron.weekly/  
+
+inside it write your script file or put your script 
+
+
+Note to show cron service running or not: 
+$ systemctl status crond.service 
+
+#===============================================
+anacron 
+$ cat /etc/anacrontab 
+// another format different of cron 
+
+Imp jobs put in , if any case system fail : 
+Cron.daliy
+Cron.hourly
+Cron.weekly
+Cron.monthly
+Cron.
+
+# show all services use a timer 
+$ systemctl list-unit –type=timer 
+#===================================
+managing a temporary file s: 
+$ systemctl cat systemd-tmpfiles-clean.timer 
+
+
+#==================================
+note : 
+crontab [filename] => 
+Remove all jobs, and replace with 
+the jobs read from filename.
+If no file is specified, stdin is used.
+
+
+#==========================
+
+# ده كدا باللنجوتش بتاع كابتن جيمي 
+recurring دوري او يتكرر 
+

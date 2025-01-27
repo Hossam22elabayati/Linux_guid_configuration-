@@ -1,0 +1,355 @@
+-> DAC (discretionary access control ) -> Basic permission , special permisson , ACL 
+->MAC (mendatory access control ) Se-linux 
+
+- > all things in a linux  system is a file
+- > Se-linux divide a system to two things Subject and object 
+
+subject 		se-linux(mac)	object
+user 				file 
+process 				directory 
+service 				 network port  	
+
+- Mac : determine any of subject can access any of object 
+بيحدد انهي سبجيكت يعمل اكسس لانهي اوبجكت 
+
+- subject need to access an objects 
+
+- when a subject need to access (se-linux) ask to identity or lable or context to access 
+- put a label or context with a subject and with object 
+- if need to access 
+	-> check first in DAC layer and then 
+	-> check layer above of it (MAC)
+
+components of Se-linux :
+- label or context 
+- modes 
+- policy 
+- Boolean 
+- see a troubleshooting with se-linux 
+
+Se linux : is a Guard between a Subject and object and control with labels 
+
+labels : have a specifc format 
+Label or context format :  is a contain a 4 parts separated by colon 
+1-unconfined_u:2-object_r:3-user_home_t:4-s0  
+
+// list to context or label 
+$ ls -lZ 
+
+// with a process , and context with process 
+	$ ps -Z  
+#===================================
+label or context fields every field contian more information : 
+1-	Part1 : type of user (root or normal , service)
+2-	Part2 : Rule 
+3-	Part3 : Type نوع الفايل 
+4-	S0 : security level 
+5 , 6 -> depend on policy used 
+
+Policy : is a group of policies , a default policy T (Targeted)
+-	Strict policy 
+-	Multi layer security MLS policy 
+- 	another more policies 
+
+# installed with system by default targeted <->
+targeted work : 
+if found a field of type (subject) <matched with> a field type on (object) 
+---> Grant access 
+if not matched -> deny 
+
+- another policy strict -> check in two fields not one field 
+- Another policy check in type of file , type of user and rule -> policy Multi layer 
+# policies depen on system work , if choose a MLS more security but load in your system 
+in check -> depend on system work ( and security needed to context)
+
+-> can write context -> if need , security field
+-> can do your own policy , customize to your company 
+
+
+SE-Linux have a 3 modes :
+	- enforcing 
+	- permissive 
+	- disable
+
+-> enforcing or enable 
+-> permissive is a (disable ) -> but send a logs  , learning from logs 
+-> disable -> disable without logs 
+
+note : 
+-> switch between enforcing and Disable  <-> must need reboot to effect 
+why ? reboot 
+- because a context is removed from all subjects and objects 
+
+-> switch between enforcing and permissive <-> not need a reboot 
+why ? 
+label is exists in subject or object but is active or not active
+
+-> permissve to a disable logic is need to reboot  
+ 
+#=========================================
+// display modes , get a current mode 
+$ getenforce 
+
+// show more informations 
+$ sestatus -> selinux status
+
+// configuration file to show a mode and policy and can edit in it
+$ nano /etc/selinux/config 
+
+// to change a mode to permissve but is temporary 
+$ setenforce 0 -> permissive 
+
+// to edit is presistent need to change in file -> /etc/selinux/config
+$ nano /etc/selinux/config 
+
+// to change a mode to enforcing 
+$ setenforce 1
+
+// need disable edit in config file 
+$ nano /etc/selinux/config 
+
+#================================================================
+Boolean (switches) :
+-> in previous order a relationship between a subject <-> object 
+
+-> have a group of services ( apache , db (mysql) , java) , 3 services contact with each other , 
+if happen hacking to apache move to jave to db , need to order relation between them 
+
+-> services between them put a switches on , off 
+-> if come a apache with a sepcific characterstics on a switch and can access db and give contact 
+- if another off close 
+
+-> between services <-> switches 
+
+# Component : 
+Troubleshooting in Selinux -> Tools (sealert , selinux troubleshooter ) 
+Logs : /var/log/audit.log
+
+# Tag of Selinux logs with AVC (is a facility )
+AVC -> Access vector control 
+
+
+// management commands to selinux :
+semanage 
+fcontext 
+chcon
+restorecon
+
+
+# to know all contexts all objects in system  : 
+$ semanage fcontext -l 
+ex : 
+/dev/infiniband/.* 
+/.* ->directory , Files and sub directories inherit it of context 
+
+# display a booleans , give all switches in your system 
+$ getsebool -a 
+
+// web page under -> /var/www/html/ -> if add a page index.html ( take a context to parent to can access it )
+
+# try to do a index.html in another directory and do a move go to with the same context 
+
+# access any content under  /var/www/html/  -> anyone have a context to this if different is deny can try it 
+
+// to show a context and places can apache accessing it : 
+$ semanage fcontext -l | grep httpd_sys_content_t
+
+# to change the following settings of context and apply to access a issue of (index.html)
+// can use two commands :
+$ semange fcontext -a -t [copy_context] [format_dir] 
+-a : add 
+-t : context 
+-d : delete 
+
+$ semanage fcontext -a -t httpd_sys_content_t '/var/www/html/(/.*)?'
+$ ls -lZ -> (not applied ) -> need to restore context 
+$ restorecon -Rvv  /var/www/html/
+-vv -> verbose 
+-R -> recurisve
+Relabeled 
+ 
+ $ ls -lZ 
+
+// change a context but is temorary , as a test  , best 
+$ chcon -t httpd_sys_content_t /var
+$ restorecon -v /var -> return to default , because it temporary 
+
+#======================================
+# semange -> boolean or port 
+# show a boleans with a decription to it
+
+$ semanage boolean -l 
+se_linux boolean 	cur_state  default_state   description	
+brt_anon_write                (off  ,  off)  Allow abrt to anon write
+
+#  control a switches 
+$ semanage boolean -h [help to show options ]
+// can do with semange or easy way with command -> setsbool
+$ setsebool  zabbix_run_sudo on  -> on it in cur_state (temporary) , need it to parmentant 
+
+// to do it paremenant 
+$ setsebool  zabbix_run_sudo on
+// display 
+$ getsebool -a or  
+[root@serverb ~]# semanage boolean -l | grep zabbix_run_sudo 
+zabbix_run_sudo                (on   ,   on)  Allow zabbix to run sudo
+ 
+# ====================================
+semanage with port :
+// get all ports  to all services , is in your systm or not in system  
+$ semanage port -l 
+
+[root@serverb ~]# semanage port -l  | grep ssh 
+ssh_port_t                     tcp          22
+
+# get a context compare when connect to port 
+// if change port number -> 2222 , service is not accesabible 
+// if change port to any service , need to change and defined this port in se-linux 
+$ semange port -a -t ssh_port_t -p tcp 2222
+
+$ semanage port -l  | grep ssh 
+
+// list all ports :
+$ semanage port -l 
+// list an customized ports 
+$ semanage port -lC 
+
+
+#=========================================
+
+[root@serverb ~]# yum list installed | grep trouble
+setroubleshoot.x86_64                            3.3.32-1.el9                     @appstream       
+setroubleshoot-plugins.noarch                    3.3.14-4.el9                     @AppStream       
+setroubleshoot-server.x86_64                     3.3.32-1.el9                     @AppStream  
+
+// if not installed : 
+to solve a problem of logs in messages : -> need to install a package setroubleshoot  
+$ yum install setroubleshoot
+And test /var/log/messages 
+
+$ sealert -l 78b5d6d6-aad7-4a92-99ce-5b9a6c041593 -> get all details and recommendation to solve a problem 
+// get a complete message and give a recommendation to solve a problem : 
+restorecon -v /var/www/html/f2 -> do a restore to context to solve 
+
+// troubleshoot and show logs  , avc a tag to se-linux 
+$ cat /var/log/audit.log  | grep avc  
+and 
+/var/log/messages
+
+$ cat /var/log/messages | grep sealert  
+54454652wd5 -> get from alog 
+
+// another thing , to show a more detials about a selinux issue and give a solutions 
+$ sealert -l  54454652wd5
+
+selinux-troubleshooter -> gui , cli install it , help you and give solutions the same sealert 
+
+another command help you : search to give all errors to tags AVC 
+$ ausearch -m AVC 
+
+#====================================
+practical seLinux :
+// i want to change apacheDocument root -> this file read from it index.html 
+default -> /var/www/html
+-> i want to change to /mnt/websites 
+label of apahe -> unconfined_u:object_r:httpd_sys_content_t:s0
+context field can  be a -> selinux user :role:type:level:file (can added)
+-> the important to selinux (targeted) is a field 3 is a type  -> httpd_sys_content_t
+
+On systems running selinux , all processes and files are labeled depend on db of context 
+
+// change selinux context to file or directory 3 ways : 
+$ semange fcontex 
+$ restorecon  -> restore context  (return depend on default in DB  )
+$chcon -> change context  but temporary
+// change context :  change file selinux context 
+$ chcon -t [type] admin_home_t /var/www/html/f2
+$ ls -lZ 
+
+Solution : 
+My scenario  : Document root -> /mnt/websites  and change context 
+With chcon -> if happen relabling return to default 
+
+i want it parmentnant in Db , with command -> semanage add context inside this Db 
+ $ semanage fcontext -a -t httpd_sys_content_t	"/mnt/websites(/.*)?"
+Syntax in the end constant syntax should write it "/mnt/websites(/.*)?"
+
+$ restorecon -Rvv /mnt/websites 
+#
+ this command do a new context under a db , but not put under a default context files
+any custom context put under 
+/etc/selinux/targeted/contexts/files/file_contexts.local 
+
+$ restorecon -v /mnt/websites 
+#==========================
+	To delete the same command in pic -> but -d 
+	To edit in role and change context -> option -> -m [modify and add new context ]
+	List all contexts  in Db -> -l 
+$ Semange ->se linux management policy , can manage context or Boolean  or port or permissive  other  
+	$ semanage fcontext 
+	$ semanage port 
+	$ semanage permissive 
+
+// if not found a semange command 
+// install a tool 
+$ yum whatprovides semange 
+// a package is policycoreutil-python 
+#=============================================================
+3- Selinux permissive to a specific service 
+- enforcing mode protect all services how to expect a one service 
+
+Enforcing to all service , and apply a targeted policy but ماعدا  permissive to service sshd
+
+$ semanage permissive -a sshd_t
+
+$ service sshd restart 
+
+$ getenforce 
+
+$  semanage permissive -l 
+
+#============================================
+4- Booleans 
+Commands : 
+setsebool
+getsebool
+semanage boolean 
+
+
+# semanage boolean -l
+// get all things to ftp  
+# semanage boolean -l | grep ftp
+# semanage boolean -l | grep http 
+
+$ setsebool ftp_anon_write on 
+-> (on (current state ),off (persistent )) , if reboot now return to off 
+
+// want it presistent 
+$ setsebool -P ftp_anon_write on 
+
+$ semanage boolean -lC
+
+
+
+
+#=============================
+note :  مهم 
+$ sestatus 
+mount fs ->  /sys/fs/selinux 
+# if not work with selinux and deactivated , not show this mounted file system 
+
+# very important whereis a database of contextes , that read a contextes from it : 
+se linux have a Database under 
+$ cat /etc/selinux/targeted/contexts/files/files_contexts 
+// can add cutomized , context to a directory in it
+
+note : 
+- When reset root password -> break a boot process early before enable selinux is disabled  , any file created a label is ??  (context)
+When a service of Authentication , read from /etc/shadow (not known this label  , deny if not do relabeling ) 
+>After edit your password do a relabel again (force file system relabeling ) do depend on database context 
+
+// show context to directory -> -ldZ 
+// any thing under directory take a parent context => Depend on Data base
+ 
+#=====================================
+selinux have  a books to securit engineers  

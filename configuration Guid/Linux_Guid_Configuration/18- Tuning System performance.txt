@@ -1,0 +1,98 @@
+Tuning system performance : 
+-Optimize system performance by selecting a tuning profile managed by the tunned daemon 
+
+(Service or daemon) : tuned 
+-> this service under it , a group of profiles , do a tuning to this profiles , choose a profile is sutible to your application or 
+service apply by server 
+
+# Can choose profile static or system choose Automatic  (by defaul Automatic)
+
+profiles install service : 
+$ yum install tuned 
+$yum enable --now tuned.service
+
+
+#=================================
+
+The performance-boosting profiles include profiles that focus on the following aspects:
+• Low latency for storage and network
+• High throughput for storage and network
+• Virtual machine performance
+• Virtualization host performance
+
+#========================================
+some profiles can choose it , is depend on use case  : 
+- balanced -> ideal for systems that require a compromise between , power saving and performance 
+- desktop -> dervied from the balanced profile , provides faster response of interactive applications 
+- throughput-performance : Tunes the system for maximuim throughtput 
+- latency-performance : ideal for server systems that required low latency at the expense of power consumption 
+- network-latency : derived from the latency-performance profile , it enables addtiional network tuning parameters to provide low network latency 
+- network-throughput : 
+- powersave
+- orcale : optimized fot orcale databases loads based on the throughput-performance profile 
+- virtual-guest -> if it runs a virtual machine 
+- virtual-host  : host for vms 
+support more and more if run -> mysql db , webserver apache , nginx , sqlserver 
+-aws : optimize aws ec2 instance 
+
+#=======================================
+=> have a two ways to manage tuned 
+Gui 
+cookbit 
+cli : 
+# return a logs 
+$ tuned 
+# show a version 
+$ tuned -v 
+
+# need a root priviligies to use 
+
+manage a tuned -> 
+$ tuned-adm --help 
+
+# list a profiles , list all availiable tunning profiles on your system 
+$ tuned-adm list 
+
+// default profile for me , activity now  
+$tuned-adm active 
+
+// change to another profile 
+$ tuned-adm profile balanced 
+
+// off all tunning use off , off an active profile 
+$ tuned-adm off 
+$ tuned-adm active
+# nothing
+
+// run agian : 
+$ tuned-adm profile virtual-guest 
+
+// show a profile information , and what do 
+$ tuned-adm profile _info virtual-guest 
+
+// show a recommanded profile to my ststem 
+$ tuned-adm recommend 
+
+// put a profile Automatic by the linux system 
+$ tuned-adm auto_profile 
+
+
+Can one profile and mereg between a profiles with command : 
+
+// merge between more than one profile 
+$ tuned-adm profile virtual-guest balanced network-latency 
+ 
+
+// to install a profiles needs in your system 
+$ dnf search profiles
+
+-> install a profile to mysql db server 
+
+#=================================================
+
+# show installed or not 
+$ yum list tuned
+
+# if not installed -> get no matched 
+
+#===================================================

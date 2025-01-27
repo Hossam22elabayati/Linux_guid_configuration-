@@ -1,0 +1,317 @@
+Network attached storage (NAS)
+NFS (network file system ):
+Linux multi-user system and isolated between them from permissions 
+
+// share directory in the same system with special permission and control  
+
+-> share a cross multiple clients and machines in linux 
+
+###################################################
+// client share (mount manual (temporary ) ) and do it persistent across reboot in Fstab 
+
+Client NFS : (mount)
+	Manually 
+	Persistently at boot -> fstab 
+	On-demand (auto fs) -> need a directory use happen mount , not need now happen umount 
+
+###########################################
+NFS -> share Linux/unix to linux/unix
+CIFS / SMB -> share from linux/unix to  linux or windows  
+-> NFS v2,3 works a udp 
+problems of NFS old v2,3: 
+	- high avaliability (single point of Failure ) to NFS server , is work in a single node , now work in Cluster more 
+	than one node -> ( parelle NFS )
+	- problem of port to NFS مكنش ليها بورت محدد تشتغل عليه -> work a fw or close or what ???? 
+	
+NFS : works with another service to solve an issue of port this service (RPC (remote procedure call )) is between server and 
+client and is int server and client this service happen a negotition and see a server will listen in port كام ?and tell the port to clients 
+
+NFS V4 :RH8 ,9  - version 4 secure can work Tcp or Udp  , support service Kerbrose (use in Authentication and encryption)
+-> form version 8 solve this problem and NFS work in dedicated port to it -> 2049 , not need RPC 
+
+##################################################################################
+work commands with NFS : 
+Server : 
+// install a nfs : 
+$ yum install nfs-utils 
+
+// then start 
+$ systemctl enable --now nfs.service 
+$ systemctl status nfs.service 
+
+// -> need to one config file to nfs : ( /etc/exports)
+inside it put a directory need to share it -> 
+// inside it put a directory -> /data 	*(rw)  
+* -> host need to share and permissions 
+
+/etc/exports -> data 		*(rw)
+-	كدا /data  هيتعمل share  لكل الناس rw  
+Can replace * (anyone ) -> with ip to subnet 192.168.1.0/24    
+Or host ip -> 192.168.1.50
+Or host In domain  -> client1.localdomain.com 
+Or all domain users -> *.cloud.com 
+
+// then server refersh to reread a /etc/exports file 
+
+// note if add a new line to shared directory , not prefer to refresh or restart a service nfs 
+// only need to tell to reread a configuration file with the following command : 
+$ exportfs -r
+$ exportfs -> to show shares run it 
+
+// add service of nfs in firewall 
+$ firewall-cmd –add-service=nfs --parement 
+$ firewall-cmd –add-service=nfs
+
+ Stop in this in a new versions , in case old versions another step in firewall and another service in firewall V3 
+add a two rpc and mountd to can use a command # shomount -e 192.168.58.130
+
+
+
+
+###################################
+Client side configuration : 
+$ yum install nfs-utils 
+
+// to show a exported list in server [mount] , in v3 , in v4 not working 
+$ showmount -e 192.168.58.128 [server ip] -> can not working
+
+
+Or : 
+// to know a share things [exports ] from server  
+$ mkdir /test_share
+$ mount 192.168.58.130:/	/testshare
+$ ls /test_share 
+// and mount my shared directories 
+
+$ mkdir mydir_sales 
+$ mkdir mydir_marketing 
+
+$ mount -t nfs4 192.168.58.130:/share/sales 		mydir_sales
+$ mount -t nfs4 192.168.58.130:/share/marketing 		mydir_marketing 
+
+$ df -h 
+
+
+add a presistent : 
+192.168.58.200:/share/mark	/share-mark	nfs4	defaults 	0	0
+
+
+// can expect a root in scnrio and root in server is same rrot in client :  not do a squash but is risky 
+/data2	*(rw,no_root_squash)
+##########################################################################
+practical again : 
+# mkdir myshare/
+# nano /etc/exports 
+/root/shares    192.168.58.130(rw,sync) 192.168.58.150(ro,sync) 192.168.58.160(ro,sync)
+
+sync : synchronize to any change from server , client show لحظي  because sync 
+or 
+// other options 
+/root/shares 192.168.58.0/24(rw)   *.mylab.com(rw,sync)    client1.localdomain.com (rw,sync)
+
+-> reread a config file /etc/exports 
+# exportfs -r  or systemctl restart nfs-server 
+// to show shares : 
+# exportfs 
+// to verfiy a share -> goog command 
+ exportfs -v
+
+---------------------------------------------------
+client : 
+// check in client 
+# showmount -e 192.168.58.128
+
+check firewall in server allow or close a firewall 
+# systemctl stop firewalld.service 
+
+# showmount -e 192.168.58.128
+
+ # mount -t nfs 192.168.58.128:/root/shares /root/mydata/
+
+notice : 
+nfs work with root , can’t work with normal users , 
+
+in server add : rwx to other if a share , because mapping a root in a client not the same 
+root in server map with nobody nobody is to security  , is most restricted 
+a config file tell me the root match <-> nobody 
+/etc/idmap.conf  
+
+Normal user done as a  salah and appear in server with uid
+
+
+######################################
+nfs is static or manually up in systemctl  -> is a problem can show with services why ? 
+
+-> A static service in systemd means the service unit file does not have an [Install] section, 
+so it cannot be enabled or disabled directly using systemctl enable or systemctl disable
+
+steps to solve :
+// check a unit files 
+# cat /usr/lib/systemd/system/nfs-utils.service
+// copy 
+# cp /usr/lib/systemd/system/nfs-utils.service /etc/systemd/system/nfs-utils.service
+# nano /etc/systemd/system/nfs-utils.service
+// add a line install in unit file: 
+
+[Install]
+WantedBy=multi-user.target
+
+
+# systemctl daemon-reload
+
+# systemctl enable --now nfs-util.service 
+
+#######################33
+// to know a version of nfs : 
+ # yum info nfs-utils
+
+
+###################################################################################################
+# Auto Fs  (on-demand ) : in a client side 
+Who can mount , unmount and put in fstab is a root user , regular user can’ t do this 
+	And this need a network , consume a network resources and cpu resource 
+	Client side <-> Auto mounter is a service name Auto Fs 
+	Configuration in Client Side 
+Auto fs -> mount happen on demand
+ 
+	Automatically mount NFS Share on-demand , and will automatically umount nfs share they are no longer being use
+
+benefits from Auto mount:  do a cd or ls do  a mount on-demand , save a bandwidth and resources load , Automatic unmount 
+if no use to it for a time , user is do mount / umount not need to root priviligies  , not need to put thing in fstab or dedicated connection 
+
+
+-	Users don’t need to root privileges to run command mount and umount commands
+-	Nfs share configure in the Automounter are available to all users on the machine , subject to access permission  (in client side all config )
+-	Nfs not need to put a persistent in (/etc/fstab)  and freeing system and network resources 
+-	AutoFs no config in server side
+-	Support two Ways :  direct and indirect mount point mapping 	, flexibility in mount point location 
+-	Direct 
+-	Indirect 
+-	Auto Fs create and remove mountpoints Automatic , not need to manual config 
+-	NFS is the Default Automounter network File system 
+-	Auto fs is service that is managed like other system services , can control it with systemctl 
+#########################################################
+options with a /etc/exports : 
+$ man -s5 exports 
+
+######################################################
+Configurations to AutoFs :  Automount direct /indirect mapping -> in two cases create two files and add lines ( add master-map file , mapping file )
+NFS : is a default Automounter network file system ,
+autofs : is a service that is managed like other system services 
+-> autofs : 
+	- start & enable 
+	- direct , indirect mount 
+	- maps files ( master-map-file )
+	- mount-map-file 
+	- autofs.conf  -> configuration file to it 
+
+$ sudo yum install autofs 
+
+/ configure an Auto-fs -> two Ways  (direct or indirect )
+// direct map : used to map an nfs share to an existing absolute path mount point  
+// indirect map : nfs server exports multiple sub-directories within directory 
+
+
+direct map : 
+-> create a master map file 
+$ touch /etc/auto.master.d/direct.autofs 
+// must an extension of file , and any name  -> .autofs (name a master map file) 
+	  Write inside it :  reference to direct map file 
+/-		/etc/auto.direct	(All direct map entries use /- as base directory , in this case , the mapping files that contains the mount details is /etc/auto.direct )
+
+/- (constant) -> reference to map file , then create a map file 
+$ touch /etc/auto.direct 
+ 
+And content : 
+/mnt/docs	-rw,sync		 serverb:/share/docs (the mount point (or key ) is always absolute path)
+
+###################################################################
+
+indirect map : if nfs exports multiple sub-directories to users alot in a one folder , not mount line by line use indeirect wildcard map 
+ 
+1- touch /etc/auto.master.d/indirect.autofs  -> shareMP in client 
+/shareMP 		/etc/auto.indirect	
+
+/shareMP ( the base directory to indirect automounts  , base mount point on client )
+
+2- creating a mapping file  (for a basic indirect mapping )
+# nano /etc/auto.indirect 
+content : 
+work 	-rw,sync 	serverb:/shares/work  
+
+work -> make a directory name work under base a /shareMP	
+/shares/work ->  under shareMP 
+work -> mount to client 
+
+################################################
+or 
+2- creating mapping file 	(indirect wildcard Map)
+touch /etc/auto.indirect 
+
+*	-rw,sync 	serverb:/shares/&
+
+* -> share ali on mohamed in client directory , share khaled in khaled in client 
+/shares/& 
+
+* , & -> mohamed or ali 
+
+note :should after do restart a service 
+# systemctl restart autofs.service 
+// and check it working 
+
+umount automtic with timeout 
+restart service  -> umount depend 
+######################################################################
+Autofs config file : 
+/etc/autofs.conf -> all config and time out  default 
+timeout = 300
+
+another config file to autofs : 
+/etc/auto.master
+
+/misc   /etc/auto.misc -> can config in this file direct 	
+
+
+
+#######################################################################
+exam Question : 
+
+# yum install autofs -y
+# systemctl start autofs.service
+# systemctl enable autofs.service
+# getent passwd production5 (verify the centralized user)
+
+#showmount -e 172.25.250.10 (this will show full path to mount)
+
+# vim /etc/auto.master.d/name.autofs
+/localhome /etc/auto.misc
+:wq
+add last line (don’t' edit the existing contents)
+# vim /etc/auto.misc
+add last line
+production5 -rw,sync,fstype=nfs4 ip:/localhome/production5
+:wq
+
+# systemctl restart autofs
+To verify:
+# su - production5
+# pwd
+# df -hT
+# exit 
+#############################################################
+
+NFS server how to show an exported directories from server in client ? 
+// in old versions of NFS 
+1- # showmount -e 192.168.1.100
+
+// option 2 
+ان الادمن يقولي الحاجه موجوده فين الشير يعني 
+
+مقليش طيب هعمل اي : 
+
+// option 3 common  -> worked in NFS4 if not activated RPC , Mountd in firewall 
+// directory mount in it (/) in server to show an exported shares  
+$ mkdir test_mounts 
+$ mount server_ip:/ 	/test 
+
+$ mount 192.168.58.10:/  /test 

@@ -1,0 +1,91 @@
+- RAID (redundant array of independent disks ) 
+or ( redundant array of inexpensive disks) :
+
+RAID in Linux : 
+when do a raid -> do a raid device  (virtual) 
+
+3 hard disks (sda , sdb , sdc ) ---> add to raid (raid1)
+// the first Block in hard disk is a Super block -> Raid do a flag , say it the hard disk ( sda --> belong virtual device raid1)
+زي واصله بين الثلاثه ديسكات و الفيرشوال ديفيس 
+raid1 is a virtual disk -> do in a file system and mount point 
+
+-> to out hard disks from RAID , stop a raid and بيقطع الواصله بينهم  
+بس لسا عارفين عن طريق السوبر بلوك انها تبع الريد 
+start to connect agian to virtual device depend on super block  , super block بيقوله انت تبع ريد كذا 
+
+// to remove this hard disks from raid do a [ zeroing ] to -> super block 
+//not : should in raid same spaces 
+
+# work with raid in Liunx configuration through -> mdadm [multi disk administration]
+// not installed by default , to install 
+# yum install mdadm 
+
+// use a command : 
+#mdadm --create [virtual_device [in /dev] ] [raid level] [number of devices] [name of devices ..]
+
+# mdadm --create /dev/md/raid-5  --level=5 --raid-devices=3 /dev/sda /dev/sdb /dev/sdc
+or write same command 
+# mdadm -C /dev/md/raid-5  -l 5 -n 3 /dev/sd[a-c]
+
+// show raid live , when do it progress 
+# watch cat /proc/mdstate  
+
+// after finish , the system add name another name added , two names بيشاوروا علي بعض عادي   
+# ls -l  /dev/md/raid-5 
+
+$ mkfs -t xfs /dev/md/raid-5 
+
+$ mount /dev/md/raid-5
+
+// show detials a raid or virtual device 
+$ mdadm --detail /dev/md/raid-5
+
+// to simulaity in disk fail  -> -f : faulity and give a name of device 
+ 
+$ mdadm /dev/md/raid-5 -f /dev/sdc
+// allow one hard disk fail in th raid 
+// facllocate 
+$ fallocate -l 1G test 
+
+// to remove a hard disk failed 
+$ mdadm /dev/md/raid-5 -r /dev/sdc 
+
+// add a new hard disk to raid 
+$ mdadm /dev/md/raid-5 -a /dev/sdf
+
+// rebuild a raid again 
+$ watch cat /proc/mdstate 
+
+$ mdadm  --detial /dev/md/raid-5 
+#####################################################
+
+// do a stop to raid  -> كدا الداتا طارت لا هو قطع اللينك بس الي موصل الهاردات باليرشوال ديفس الريد 
+$ mdadm --stop /dev/md/raid-5 
+--stop or -S 
+
+-> when start agian , super block : definded in it  a raid device to it 
+// to return -> --assemble or -A , --scan or -s 
+--assemble -> use assemble mode not a create mode  , enter to mode assemble and scan to raid ال كانوا معمولين قبل كدا
+# mdadm -A -s 
+
+#####################################
+// i want to remove a raid and when rescan not found , remove raid and take a hards disks 
+
+-> first , need to earse a super blocks to every hard disk  , do a zeroing to superblocks 
+# mdadm stop /dev/md/raid-5 
+
+// zeroing and give hard disks , i used it in raid 
+ # mdadm --zero-superblock /dev/sdc /dev/sda /dev/sde 
+
+[root@localsvr ~]# mdadm -A -s 
+mdadm: No arrays found in config file or automatically
+
+######################################################
+// can do a raid , using a partitions -> try it and can a partitons same space and take from deffirent disks take a partitions add to raid 
+mdadm support a raid levels : 
+// Currently, Linux supports LINEAR md devices, 
+RAID0 (striping), RAID1 (mirroring), RAID4, RAID5, RAID6, RAID10, 
+
+
+
+

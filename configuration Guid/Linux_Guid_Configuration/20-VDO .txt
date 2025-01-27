@@ -1,0 +1,92 @@
+Virtual Data optimizier (VDO) : added from RDEL 7.5 
+VDO :  is a kernel  module  that can save disk space and reduce replication bandwidth
+-> benefit from disk space save , 
+-> if have a two servers happen a replication between them , tradtional network or cloud -> save traffic or bandwidth 
+
+VDO kernel module contain two modules :
+kvdo module -> used  to control data compression 
+uds module -> handles data replication 
+
+
+VDO use to gain a three features :
+	- zero block elmination  -> data block empty مش عليها اي حاجه
+	- deduplication of redundant blocks 
+	- data compresion 
+
+-> VDO applies these inline and on-the-fly -> و انا شغال و الديسكات موجوده او لو هتعمل بلان من البدايه يفضل نفعله من البدايه 
+
+#######################################################
+to elmination to zero-block data : steps or work with three techniques 
+	- do a filteration to zero-blocks or data block empty  -> 
+		1- removing zero blocks 
+		2- work with data بشوف اي الي متكرر في الداتا بتاعتي و ابدا اتخلص من الحجات الي متكرره عندي 
+		3- elminiate duplication blocks
+		4-  compress remaining blocks 
+	
+Save space and bandwidth in replication 
+##################################
+types of data to benefit from this features 
+هل كل انواع الداتا عندي اقدر استفيد من الفيتشر دي فيها 
+لا مش كله 
+
+files types -> Audio or video files will not benefit from this technology  هما اوريدي كمبريسد مش مستفيد منها
+but -> useage in online backups , virtual machines files , containers الاستفاده في السيز هنا او الباند ويدس 
+
+##########################################################
+VDO work : 
+VDO deployment models : 
+	- can vdo work فوق block devices direct  -> then do a LVM -> then do FS 
+	- or work upper layer on raid to apply redundant و اشغله علي الريد 
+VDO => ممكن يبقا جواها اكثر من بلوك ديفس 
+can use with storage -> object , local , block , files -> benefit from my feature and work with it 
+###########################################################
+VDO configuration : 
+// check , already installed 
+root@serverb ~]# dnf list installed | grep vdo
+kmod-kvdo.x86_64                                 8.2.3.3-117.el9                  @anaconda        
+vdo.x86_64                                       8.2.2.2-1.el9                    @anaconda       
+
+// if any issue install , a missing modules 
+# dnf install kmod-kvdo vdo
+or 
+# dnf reinstall vdo
+
+# systemctl status vdo.service 
+# systemctl enable --now vdo.service 
+
+mydisk -> 10G
+// create a vdo 
+# vdo create --name my-vdo1 --device /dev/sdb  --vdoLogicalSize =10G  --verbose 
+take a blkid 
+modprobe kvdo -> send to kernel to تحس بيه  
+
+# vdo states 
+ # vdo status -n myvdo --human-readable
+// show a compress and depduplication is enable or not 
+$ sudo vdo status -n myvdo | egrep 'Compression|Deduplication'
+# lsblk -> create from my disk vdo 
+
+#####################################
+# pvcreate /dev/mapper/my-vdo1-> work with LVm 
+or workfile system in it direct 
+
+# sudo mkfs.xfs /dev/mapper/myvdo
+# mount dev/mapper/myvdo /mnt/mydata
+
+// presistent and put in fstab
+/dev/mapper/my_vdo /mnt/my_vdo xfs defaults,x-systemd.requires=vdo.service 0 0
+
+############################################3
+// to test deduplication
+$ wget download_iso
+show space and transfer to my vdo directory 
+
+check a vdo :
+# vdo status -n myvdo --human-readable
+
+do a copy from image in same dir of vdo and show a 
+
+#  vdo status -n myvdo --human-readable
+// optimize the same size 
+###############################################
+// can apply on raid , fs block , encrypted disk 
